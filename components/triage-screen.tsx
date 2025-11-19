@@ -125,7 +125,7 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
         <div className="text-center mb-12">
           {/* Updated Welcome Message */}
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome! What do you need <span className="text-blue-600">Fee-ver</span> to check on your bill?
+            What do you need <span className="text-blue-600">Fee-ver</span> to check on your bill?
           </h1>
           <p className="text-slate-600">This helps us focus the analysis.</p>
         </div>
