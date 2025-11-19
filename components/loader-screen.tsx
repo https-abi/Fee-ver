@@ -20,7 +20,7 @@ export default function LoaderScreen() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentPhrase((prev) => (prev + 1) % phrases.length);
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);

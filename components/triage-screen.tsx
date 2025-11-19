@@ -14,17 +14,17 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
   const [selectedHmo, setSelectedHmo] = useState<string | null>(null);
 
   const hmoProviders = [
-    'Cocolife Health Care',
-    'Intellicare',
-    'Maxicare',
-    'Medicard',
-    'Medicare',
-    'PhilHealth',
-    'Valuecare'
+    { full: 'United Coconut Planters Life Assurance Corporation', short: 'Cocolife' },
+    { full: 'Asalus Corporation', short: 'Intellicare' },
+    { full: 'Maxicare Healthcare Corporation', short: 'Maxicare' },
+    { full: 'MediCard Philippines, Inc.', short: 'MediCard' },
+    { full: 'Medicare Plus, Inc.', short: 'Medicare' },
+    { full: 'Philippine Health Insurance Corporation', short: 'PhilHealth' },
+    { full: 'Value Care Health Systems, Inc.', short: 'Valuecare' }
   ];
 
-  const handleHmoSelect = (provider: string) => {
-    setSelectedHmo(provider);
+  const handleHmoSelect = (provider: typeof hmoProviders[0]) => {
+    setSelectedHmo(provider.short);
     setShowHmoDropdown(false);
   };
 
@@ -59,7 +59,7 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
                 </div>
               </div>
               <p className="text-slate-600 text-sm mb-6">
-                I paid cash or this is my final balance
+                I have settled the bill directly with the provider, without the use of an HMO.
               </p>
             </div>
             <Button className="w-full bg-green-600 hover:bg-green-700">
@@ -82,7 +82,7 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
                 </div>
               </div>
               <p className="text-slate-600 text-sm mb-6">
-                I used a Health Maintenance Organization (HMO) and have my Letter of Authorization (LOA)
+                I used a Health Mandated Organization (HMO) and have my Letter of Authorization (LOA)
               </p>
 
               <div className="relative mb-6">
@@ -97,16 +97,17 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
                 </button>
 
                 {showHmoDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-lg z-10">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-lg z-10 max-h-56 overflow-y-auto">
                     {hmoProviders.map((provider) => (
                       <button
-                        key={provider}
+                        key={provider.short}
                         onClick={() => handleHmoSelect(provider)}
-                        className={`w-full px-4 py-2 text-left hover:bg-blue-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                          selectedHmo === provider ? 'bg-blue-100 text-blue-900 font-semibold' : 'text-slate-900'
+                        className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors first:rounded-t-lg last:rounded-b-lg border-b last:border-b-0 border-slate-100 ${
+                          selectedHmo === provider.short ? 'bg-blue-100 text-blue-900 font-semibold' : 'text-slate-900'
                         }`}
                       >
-                        {provider}
+                        <p className="font-medium">{provider.full}</p>
+                        <p className="text-xs text-slate-500">({provider.short})</p>
                       </button>
                     ))}
                   </div>

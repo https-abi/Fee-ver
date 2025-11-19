@@ -51,7 +51,6 @@ Respectfully,
 export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
   const [emailTemplate, setEmailTemplate] = useState(generateEmailTemplate());
   const [copied, setCopied] = useState(false);
-  const [contributeData, setContributeData] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(emailTemplate);
@@ -82,7 +81,7 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
           </button>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Apply for a reassessment</h1>
           <p className="text-slate-600">
-            Professionally crafted template to politely question flagged charges
+            Automatically draft an email with the details of the anomalies found. Request a reassessment with a clear and professional tone.
           </p>
         </div>
 
@@ -97,7 +96,7 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
           <Card className="p-4 bg-green-50 border-green-200">
             <p className="text-sm font-semibold text-slate-900 mb-1">Privacy First</p>
             <p className="text-sm text-slate-700">
-              This template is generated on your device. You control what you send and to whom.
+              This template is exclusively created and processed on your device. No data leaves your local machine unless you personally decide where and to whom it is delivered.
             </p>
           </Card>
         </div>
@@ -163,37 +162,6 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
             Open in Email
           </Button>
         </div>
-
-        {/* Data Privacy Note */}
-        <Card className="p-4 bg-slate-100 border-slate-300">
-          <div className="flex items-start gap-3">
-            <button
-              onClick={() => setContributeData(!contributeData)}
-              className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer mt-0.5 transition-colors ${
-                contributeData
-                  ? 'bg-blue-600 border-blue-600'
-                  : 'border-slate-400 hover:border-slate-500'
-              }`}
-            >
-              {contributeData && (
-                <svg
-                  className="w-3 h-3 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </button>
-            <p className="text-sm text-slate-700">
-              <span className="font-semibold">Optional Data Contribution:</span> Help us build the most accurate benchmark database. After you resolve your billing dispute, consider contributing anonymized data {'{'} item, price, facility {'}'} to our community database. This makes Fee-ver better for everyone—completely optional and anonymous.
-            </p>
-          </div>
-        </Card>
       </div>
     </div>
   );

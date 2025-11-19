@@ -4,7 +4,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle, Copy, Share2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Copy, Share2, X, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider
+} from '@/components/ui/tooltip';
 
 interface AnalysisScreenProps {
   billData: any;
@@ -92,17 +98,26 @@ export default function AnalysisScreen({
         {/* Summary Cards */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
           <Card className="p-6">
-            <p className="text-sm text-slate-600 mb-2">Total Charges</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-slate-600">Total Charges</p>
+              <Tooltip content="The total amount charged on your medical bill before any reductions or insurance coverage." />
+            </div>
             <p className="text-2xl font-bold text-slate-900">₱{analysis.summary.totalCharges.toLocaleString()}</p>
           </Card>
           <Card className="p-6 border-red-200 bg-red-50">
-            <p className="text-sm text-slate-600 mb-2">Flagged Amount</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-slate-600">Flagged Amount</p>
+              <Tooltip content="The total amount of charges we identified as potentially problematic, including duplicates and prices above benchmark rates." />
+            </div>
             <p className="text-2xl font-bold text-red-600">₱{analysis.summary.flaggedAmount.toLocaleString()}</p>
             <p className="text-xs text-red-600 mt-1">{analysis.summary.percentageFlagged} of total</p>
           </Card>
           {analysisType === 'v2' && (
             <Card className="p-6 border-green-200 bg-green-50">
-              <p className="text-sm text-slate-600 mb-2">Your Responsibility</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-slate-600">Your Responsibility</p>
+                <Tooltip content="The amount you're responsible for after insurance coverage and co-insurance percentages are applied." />
+              </div>
               <p className="text-2xl font-bold text-green-600">
                 ₱{(analysis.summary as any).patientResponsibility?.toLocaleString()}
               </p>
@@ -112,14 +127,19 @@ export default function AnalysisScreen({
 
         {/* Issues Found */}
         <Card className="mb-8 p-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">Issues Found</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-900">Issues Found</h2>
+          </div>
 
           {/* Duplicate Items */}
           {analysis.duplicates.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
-                <h3 className="font-semibold text-slate-900">Duplicate Charges</h3>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  <h3 className="font-semibold text-slate-900">Duplicate Charges</h3>
+                  <Tooltip content="The same service appears to be charged multiple times on your bill. This is often a billing system error." />
+                </div>
               </div>
               <div className="space-y-3">
                 {analysis.duplicates.map((item: any, idx: number) => (
@@ -143,8 +163,11 @@ export default function AnalysisScreen({
           {analysis.benchmarkIssues.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <h3 className="font-semibold text-slate-900">Above Benchmark (Fee-ver Check)</h3>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <h3 className="font-semibold text-slate-900">Above Benchmark (Fee-ver Check)</h3>
+                  <Tooltip content="These charges are 20% or more above the typical prices in your region. This doesn't mean they're wrong, but worth questioning." />
+                </div>
               </div>
               <div className="space-y-3">
                 {analysis.benchmarkIssues.map((item: any, idx: number) => (
@@ -178,7 +201,9 @@ export default function AnalysisScreen({
         {/* HMO Details (V2 only) */}
         {analysisType === 'v2' && (
           <Card className="mb-8 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">HMO Coverage Breakdown</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-900">HMO Coverage Breakdown</h2>
+            </div>
             <div className="space-y-3">
               {(analysis as any).hmoItems?.map((item: any, idx: number) => (
                 <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
