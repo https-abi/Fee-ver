@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle, Copy, Eye, X, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Copy, Eye, X, FileText, HelpCircle } from 'lucide-react';
 import {
   Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
   Collapsible,
@@ -42,6 +45,11 @@ interface IssueDetail {
   data: any;
 }
 
+const ORANGE_SHADES = ["#fed7aa", "#fdba74", "#fb923c", "#f97316", "#ea580c", "#c2410c"];
+const RED_SHADES = ["#fecaca", "#fca5a5", "#f87171", "#ef4444", "#dc2626", "#b91c1c"];
+const BROWN_SHADES = ["#d4a574", "#c89666", "#b8865a", "#a8784e", "#8b6846", "#7d5e3f"];
+const GREEN_SHADE = "#10b981"; //just for debugging
+
 export default function AnalysisScreen({
   billData,
   analysisType,
@@ -56,16 +64,35 @@ export default function AnalysisScreen({
   const analysis = billData || mockAnalysisV1;
   const hasIssues = analysis.summary.flaggedAmount > 0 || analysis.duplicates.length > 0 || analysis.benchmarkIssues.length > 0;
 
+  const getColorForItem = (itemName: string, index: number) => {
+    const isDuplicate = analysis.duplicates.some((dup: any) => dup.item === itemName);
+    const isBenchmark = analysis.benchmarkIssues.some((bench: any) => bench.item === itemName);
+    
+    if (isDuplicate && isBenchmark) {
+      // Both issues - use brown shades
+      return BROWN_SHADES[index % BROWN_SHADES.length];
+    } else if (isDuplicate) {
+      // Duplicate only - use orange shades
+      return ORANGE_SHADES[index % ORANGE_SHADES.length];
+    } else if (isBenchmark) {
+      // Above average only - use red shades
+      return RED_SHADES[index % RED_SHADES.length];
+    } else {
+      // No issues - use green
+      return GREEN_SHADE;
+    }
+  };
+
   const pieChartData = [
     ...analysis.duplicates.map((item: any, index: number) => ({
       name: item.item,
       value: item.totalCharged,
-      color: ["#ef4444", "#f59e0b", "#ec4899", "#8b5cf6"][index % 4]
+      color: getColorForItem(item.item, index)
     })),
     ...analysis.benchmarkIssues.map((item: any, index: number) => ({
       name: item.item,
       value: item.charged,
-      color: ["#3b82f6", "#10b981", "#06b6d4", "#6366f1"][index % 4]
+      color: getColorForItem(item.item, index)
     }))
   ];
 
@@ -281,11 +308,16 @@ export default function AnalysisScreen({
                     </div>
                   </div>
                   <div className="text-right">
-                    {/* SHOW FAIR PRICE / ORIGINAL CHARGE */}
                     {item.benchmarkPrice && item.type === "charge" ? (
                       <div className="flex flex-col items-end">
                         <p className="font-bold text-green-600 text-sm">
-                          Supposed payable: {formatAmount(item.benchmarkPrice)}
+                          <span 
+                            className="cursor-help underline decoration-dotted" 
+                            title="Calculated based on the flagged issues identified below"
+                          >
+                            Supposed payable:
+                          </span>
+                          {' '}{formatAmount(item.benchmarkPrice)}
                         </p>
                         <p className="text-xs text-slate-400 line-through">
                           CHARGE: {formatAmount(item.amount)}
@@ -318,13 +350,14 @@ export default function AnalysisScreen({
           {/* Duplicate Items */}
           {analysis.duplicates.length > 0 && (
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
                   <h3 className="font-semibold text-slate-900">
                     Duplicate Charges
                   </h3>
                 </div>
+                <Tooltip content="These charges appear multiple times on your bill and may be billing errors that should be reviewed." />
               </div>
               <div className="space-y-3">
                 {analysis.duplicates.map((item: any, idx: number) => (
@@ -333,7 +366,7 @@ export default function AnalysisScreen({
                     onClick={() =>
                       setSelectedIssue({ type: "duplicate", data: item })
                     }
-                    className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200 cursor-pointer hover:shadow-md hover:border-orange-400 transition-all"
+                    className="flex justify-between items-start p-3 bg-red-50 rounded-lg border border-red-200 cursor-pointer hover:shadow-md hover:border-red-400 transition-all"
                   >
                     <div>
                       <p className="font-medium text-slate-900">{item.item}</p>
@@ -341,7 +374,7 @@ export default function AnalysisScreen({
                         Charged {item.occurrences} times
                       </p>
                     </div>
-                    <p className="font-semibold text-orange-600">
+                    <p className="font-semibold text-red-600">
                       {formatAmount(item.totalCharged)}
                     </p>
                   </div>
@@ -353,13 +386,14 @@ export default function AnalysisScreen({
           {/* Price Integrity Audit (Benchmark Issues) */}
           {analysis.benchmarkIssues.length > 0 && (
             <div className="mb-6">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <HelpCircle className="w-5 h-5 text-orange-500" />
                   <h3 className="font-semibold text-slate-900">
-                    Price Integrity Audit
+                    Above Average Prices (in Angeles City)
                   </h3>
                 </div>
+                <Tooltip content="These charges are higher than typical rates and may be worth reviewing with your provider." />
               </div>
               <div className="space-y-3">
                 {analysis.benchmarkIssues.map((item: any, idx: number) => (
@@ -368,7 +402,7 @@ export default function AnalysisScreen({
                     onClick={() =>
                       setSelectedIssue({ type: "benchmark", data: item })
                     }
-                    className="p-4 bg-red-50 rounded-lg border border-red-200 cursor-pointer hover:shadow-md hover:border-red-400 transition-all"
+                    className="p-4 bg-orange-50 rounded-lg border border-orange-200 cursor-pointer hover:shadow-md hover:border-orange-400 transition-all"
                   >
                     <p className="font-medium text-slate-900 mb-2">
                       {item.item}
@@ -388,7 +422,7 @@ export default function AnalysisScreen({
                       </div>
                       <div>
                         <p className="text-slate-600">Variance</p>
-                        <p className="font-semibold text-red-600">
+                        <p className="font-semibold text-orange-600">
                           {item.variance}
                         </p>
                       </div>
@@ -487,7 +521,7 @@ export default function AnalysisScreen({
                       <span className="text-slate-600">
                         Total Amount Charged:
                       </span>
-                      <span className="font-semibold text-orange-600">
+                      <span className="font-semibold text-red-600">
                         {formatAmount(selectedIssue.data.totalCharged)}
                       </span>
                     </div>

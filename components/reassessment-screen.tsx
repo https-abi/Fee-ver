@@ -177,7 +177,7 @@ export default function ReassessmentScreen({ billData, onBack }: DisputeKitScree
               Data Included
             </p>
             <p className="text-sm text-slate-700">
-              We've inserted all identified **duplicate charges** and **price integrity issues** directly into the body.
+              We've inserted all identified duplicate charges and price integrity issues directly into the body.
             </p>
           </Card>
         </div>
@@ -220,7 +220,7 @@ export default function ReassessmentScreen({ billData, onBack }: DisputeKitScree
                 1.
               </span>
               <span>
-                **Customize the template** with your specific details (name, dates, patient ID)
+                Customize the template with your specific details (name, dates, patient ID)
               </span>
             </li>
             <li className="flex gap-3">
@@ -228,14 +228,14 @@ export default function ReassessmentScreen({ billData, onBack }: DisputeKitScree
                 2.
               </span>
               <span>
-                Find the **hospital's billing email address** on your bill or website
+                Find the hospital's billing email address on your bill or website
               </span>
             </li>
             <li className="flex gap-3">
               <span className="font-semibold text-amber-600 flex-shrink-0">
                 3.
               </span>
-              <span>**Copy** or **Open in Email**, send the request, and save a record of the sent email.</span>
+              <span>Copy or Open in Email, send the request, and save a record of the sent email.</span>
             </li>
           </ol>
         </Card>
