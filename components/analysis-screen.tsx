@@ -5,13 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertTriangle,
-  CheckCircle,
-  Copy,
-  Eye,
-  X,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, Copy, Eye, X } from 'lucide-react';
 import {
   Tooltip,
 } from "@/components/ui/tooltip";
@@ -20,7 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label, Tooltip as RechartsTooltip } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Label, Tooltip as RechartsTooltip } from "recharts";
 
 interface AnalysisScreenProps {
   billData: any;
@@ -152,15 +146,15 @@ export default function AnalysisScreen({
         )}
 
         {/* Summary Cards */}
-        <div className="w-full mb-8 flex flex-col md:flex-row">
+        <div className="w-full mb-8 flex flex-col md:flex-row gap-6">
           <div
-            className={`grid gap-4 w-full flex-1 ${
-              analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
+            className={`flex flex-col gap-3 w-full md:w-1/2 ${
+              analysisType === "v2" ? "" : ""
             }`}
           >
             {/*Total Charges*/}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-2">
+            <Card className="p-4 flex flex-col justify-center flex-1">
+              <div className="flex items-center justify-between mb-1">
                 <p className="text-sm text-slate-600">Total Charges</p>
                 <Tooltip content="The total amount of all charges listed on your bill before any insurance or discounts." />
               </div>
@@ -169,22 +163,22 @@ export default function AnalysisScreen({
               </p>
             </Card>
             {/*Flagged Amount*/}
-            <Card className="p-6 border-red-200 bg-red-50">
-              <div className="flex items-center justify-between">
+            <Card className="p-4 flex flex-col justify-center border-red-200 bg-red-50 flex-1">
+              <div className="flex items-center justify-between mb-1">
                 <p className="text-sm text-slate-600">Flagged Amount</p>
                 <Tooltip content="The total amount of charges identified as potential issues." />
               </div>
               <p className="text-2xl font-bold text-red-600">
                 ₱{(analysis.summary.flaggedAmount || 0).toLocaleString()}
               </p>
-              <p className="text-xs text-red-600 mb-2">
+              <p className="text-xs text-red-600 mt-0.5">
                 {analysis.summary.percentageFlagged} of total
               </p>
             </Card>
             {/*If HMO Coverage Analysis*/}
             {analysisType === "v2" && (
-              <Card className="p-6 border-green-200 bg-green-50">
-                <div className="flex items-center justify-between mb-2">
+              <Card className="p-4 flex flex-col justify-center border-green-200 bg-green-50 flex-1">
+                <div className="flex items-center justify-between mb-1">
                   <p className="text-sm text-slate-600">Your Responsibility</p>
                   <Tooltip content="The amount you're responsible for after coverage." />
                 </div>
@@ -195,20 +189,18 @@ export default function AnalysisScreen({
             )}
           </div>
           {/* Charts */}
-          <div className="flex-1 md:ml-6 mt-6 md:mt-0 flex items-center justify-center min-h-[400px]">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full h-full flex flex-col justify-between">
-              <h3 className="text-lg font-semibold text-slate-900 text-center">Detailed Analysis</h3>
-              <div className="flex-grow flex items-center justify-center mb-5 min-h-[320px] max-h-[400px]">
+          <div className="flex-1 md:w-1/2 flex items-center justify-center">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full">
+              <h3 className="text-lg font-semibold text-slate-900 text-center mb-2">Detailed Analysis</h3>
+              <div className="flex items-center justify-center" style={{ height: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieChartData}
                       cx="50%"
-                      cy={`${
-                        analysisType === "v2" ? "40%" : "50%"
-                      }`}
-                      innerRadius={80}
-                      outerRadius={120}
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
                       paddingAngle={2}
                       dataKey="value"
                       labelLine={false}
@@ -237,21 +229,6 @@ export default function AnalysisScreen({
                       cursor={{ fill: 'transparent' }}
                       wrapperStyle={{ outline: 'none', zIndex: 1000 }}
                       allowEscapeViewBox={{ x: true, y: true }}
-                    />
-                    <Legend 
-                      layout="horizontal" 
-                      verticalAlign="bottom" 
-                      align="center"
-                      wrapperStyle={{ paddingTop: '16px' }}
-                      formatter={(value, entry, index) => {
-                        const item = pieChartData[index];
-                        const percentage = analysis.summary.totalCharges > 0 ? ((item.value / analysis.summary.totalCharges) * 100).toFixed(1) : "0.0";
-                        return (
-                          <span className="text-slate-700 text-sm">
-                            {item.name}: {percentage}%
-                          </span>
-                        );
-                      }}
                     />
                     <Label
                       content={({ viewBox }) => {
