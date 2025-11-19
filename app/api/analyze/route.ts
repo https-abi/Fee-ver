@@ -99,13 +99,12 @@ export async function POST(req: NextRequest) {
       throw new Error("Workflow finished but returned no usable output.");
     }
 
-    // Define a loose interface to handle both Direct and HMO structures
     interface OcrItem {
       description: string;
-      price?: number; // Direct
-      total_charge?: number; // HMO
-      hmo_amount?: number; // HMO
-      patient_amount?: number; // HMO
+      price?: number;
+      total_charge?: number;
+      hmo_amount?: number;
+      patient_amount?: number;
     }
 
     let ocrResult: { items: OcrItem[], total?: number } = { items: [] };
@@ -141,7 +140,7 @@ export async function POST(req: NextRequest) {
     const analysisResult = {
       duplicates: [] as any[],
       benchmarkIssues: [] as any[],
-      hmoItems: [] as any[], // New field for HMO Breakdown
+      hmoItems: [] as any[],
       summary: {
         totalCharges: 0,
         flaggedAmount: 0,
@@ -160,11 +159,38 @@ export async function POST(req: NextRequest) {
     let calculatedHmoCovered = 0;
 
     items.forEach((item: OcrItem) => {
-      // Normalize Fields (Handle both v1 and v2 prompts)
       const desc = item.description || "Unknown Item";
+      const lowerDesc = desc.toLowerCase();
+
+      // --- KEYWORD FILTER (Fix for Double Counting) ---
+      // Skip items that are clearly payments, discounts, or totals
+      if (
+        lowerDesc.includes('payment') ||
+        lowerDesc.includes('discount') ||
+        lowerDesc.includes('deposit') ||
+        lowerDesc.includes('less ') ||
+        lowerDesc.includes('adjustment') ||
+        lowerDesc.includes('total') ||
+        lowerDesc.includes('balance') ||
+        lowerDesc.includes('amount due')
+      ) {
+        return; // Skip this item completely
+      }
+
       const price = item.total_charge || item.price || 0;
-      const hmoAmt = item.hmo_amount || 0;
-      const patientAmt = item.patient_amount || 0;
+
+      // Fallback calculation logic
+      let hmoAmt = item.hmo_amount || 0;
+      let patientAmt = item.patient_amount;
+
+      // Smart Balancing
+      if (hmoAmt > 0) {
+        patientAmt = Math.max(0, price - hmoAmt);
+      } else if (patientAmt === price && price > 0) {
+        hmoAmt = 0;
+      } else if (patientAmt === undefined || patientAmt === null) {
+        patientAmt = 0;
+      }
 
       // Sum Totals
       calculatedTotal += price;
@@ -175,13 +201,14 @@ export async function POST(req: NextRequest) {
       analysisResult.hmoItems.push({
         item: desc,
         covered: hmoAmt > 0 ? "Yes" : "No",
-        coInsurance: hmoAmt > 0 && patientAmt > 0 ? "Partial" : (hmoAmt > 0 ? "100%" : "0%"),
+        coInsurance: (hmoAmt > 0 && patientAmt > 0) ? "Partial" : (hmoAmt > 0 ? "100%" : "0%"),
         patientResponsibility: patientAmt,
-        hmoAmount: hmoAmt
+        hmoAmount: hmoAmt,
+        totalCharged: price
       });
 
       // Duplicate Logic
-      const key = desc.trim().toLowerCase();
+      const key = lowerDesc.trim();
       const current = itemCounts.get(key) || { count: 0, total: 0, originalItem: item };
       itemCounts.set(key, {
         count: current.count + 1,
@@ -202,7 +229,6 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Populate Duplicates
     itemCounts.forEach((val, key) => {
       if (val.count > 1) {
         analysisResult.duplicates.push({
@@ -215,7 +241,6 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Final Summary
     analysisResult.summary.totalCharges = calculatedTotal || ocrResult.total || 0;
     analysisResult.summary.patientResponsibility = calculatedPatientDue;
     analysisResult.summary.hmoCovered = calculatedHmoCovered;

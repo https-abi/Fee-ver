@@ -27,7 +27,7 @@ Rules:
 1. Prioritize "Hospital Charges", "Professional Fees", "Medicines".
 2. Strip currency symbols.
 3. Use total line amount (quantity * unit price).
-4. Exclude non-charge entries.
+4. EXCLUDE "Payment", "Discount", "Deposit", "Balance Forward", or "Total" lines from the items list.
 5. Output the valid JSON block at the end of your response.
 `;
 
@@ -35,7 +35,7 @@ const PROMPT_HMO = `
 System Prompt for qwen-vl-max (HMO/Insurance):
 You are an expert medical bill analyzer for HMO claims.
 STEP 1: VISUAL OBSERVATION
-Start by providing a "DEBUG REPORT": Describe the document. Look specifically for columns like "Actual Charges", "HMO Approved", "PhilHealth", and "Patient Due" (or "Excess").
+Start by providing a "DEBUG REPORT": Describe the document. Look specifically for columns labeled "PhilHealth", "HMO", "Discount", "Medicare", or "Insurance".
 
 STEP 2: DATA EXTRACTION
 Extract the billing information into a valid JSON object with a DETAILED breakdown per item.
@@ -52,11 +52,12 @@ Format:
 }
 
 Rules:
-1. "total_charge": The full amount before any deductions.
-2. "hmo_amount": The amount covered by HMO + PhilHealth.
-3. "patient_amount": The amount the patient must actually pay (Excess). If 0, write 0.
-4. If the document only shows a total summary, try to distribute it or create a summary item.
-5. Output the valid JSON block at the end of your response.
+1. "total_charge": The GROSS amount for the item (leftmost charge column).
+2. "hmo_amount": The SUM of any columns labeled PhilHealth, HMO, LOA, or Discount.
+3. "patient_amount": The "Excess" or "Amount Due". 
+4. CALCULATION RULE: If you see "total_charge" and "hmo_amount" but no explicit "patient_amount", CALCULATE it: patient_amount = total_charge - hmo_amount.
+5. DO NOT include "Payment", "Discount", "Deposit" or "Total" lines as items. Only list actual services/medicines.
+6. Output the valid JSON block at the end of your response.
 `;
 
 export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisComplete }: TriageScreenProps) {
