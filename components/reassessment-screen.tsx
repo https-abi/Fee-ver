@@ -205,7 +205,7 @@ export default function ReassessmentScreen({ billData, onBack }: DisputeKitScree
           </div>
           
           <p className="text-xs text-slate-500 mt-3">
-            **Action Required:** Please customize the bracketed placeholders (`[YOUR FULL NAME]`, `[DATE]`, etc.) before sending.
+            <b>Action Required:</b> Please customize the bracketed placeholders (`[YOUR FULL NAME]`, `[DATE]`, etc.) before sending.
           </p>
         </Card>
 
