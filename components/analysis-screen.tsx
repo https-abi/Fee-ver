@@ -24,6 +24,7 @@ interface AnalysisScreenProps {
   analysisType: "v1" | "v2";
   onComplete: () => void;
   onBack: () => void;
+  onReturnHome: () => void;
 }
 
 // Mock analysis data
@@ -56,6 +57,7 @@ const mockAnalysisV1 = {
     flaggedAmount: 8000,
     percentageFlagged: "17.8%",
   },
+  hasDiscrepancies: false,
 };
 
 const mockAnalysisV2 = {
@@ -81,6 +83,7 @@ const mockAnalysisV2 = {
     hmoCovered: 28000,
     patientResponsibility: 17000,
   },
+  hasDiscrepancies: false,
 };
 
 interface IssueDetail {
@@ -93,6 +96,7 @@ export default function AnalysisScreen({
   analysisType,
   onComplete,
   onBack,
+  onReturnHome,
 }: AnalysisScreenProps) {
   const [copied, setCopied] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
@@ -103,6 +107,10 @@ export default function AnalysisScreen({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const returnHome = () => {
+    onReturnHome();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -110,9 +118,24 @@ export default function AnalysisScreen({
         <div className="mb-8">
           <button
             onClick={onBack}
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-4"
+            className="flex items-center justify-center h-[30px] w-[30px] rounded-full bg-slate-300 hover:bg-slate-200 font-medium text-sm mb-4"
           >
-            ← Back to Triage
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-slate-800"
+            >
+              <path
+                d="M15 18L9 12L15 6"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             Analysis Report
@@ -312,12 +335,37 @@ export default function AnalysisScreen({
             <Copy className="w-4 h-4 mr-2" />
             {copied ? "Copied!" : "Copy Report"}
           </Button>
-          <Button
-            onClick={onComplete}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Next: Apply for Reassessment →
-          </Button>
+          {analysis.hasDiscrepancies ? (
+            <Button
+              onClick={onComplete}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Apply for Reassessment →
+            </Button>
+          ) : (
+            <Button
+              onClick={returnHome}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-white"
+              >
+                <path
+                  d="M20 6L9 17L4 12"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Continue
+            </Button>
+          )}
         </div>
       </div>
 

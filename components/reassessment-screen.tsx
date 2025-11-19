@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Copy, Download, Mail } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Copy, Download, Mail } from "lucide-react";
 
 interface DisputeKitScreenProps {
   billData: any;
@@ -59,10 +59,10 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
   };
 
   const handleDownload = () => {
-    const element = document.createElement('a');
-    const file = new Blob([emailTemplate], { type: 'text/plain' });
+    const element = document.createElement("a");
+    const file = new Blob([emailTemplate], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
-    element.download = 'medical-bill-dispute-template.txt';
+    element.download = "medical-bill-dispute-template.txt";
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -75,89 +75,125 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
         <div className="mb-8">
           <button
             onClick={onBack}
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-4"
+            className="flex items-center justify-center h-[30px] w-[30px] rounded-full bg-slate-300 hover:bg-slate-200 font-medium text-sm mb-4"
           >
-            ← Back to Home
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-slate-800"
+            >
+              <path
+                d="M15 18L9 12L15 6"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Apply for a reassessment</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            Apply for a reassessment
+          </h1>
           <p className="text-slate-600">
-            Automatically draft an email with the details of the anomalies found. Request a reassessment with a clear and professional tone.
+            Automatically draft an email with the details of the anomalies
+            found. Request a reassessment with a clear and professional tone.
           </p>
         </div>
 
         {/* Info Cards */}
         <div className="grid md:grid-cols-2 gap-4 mb-8">
           <Card className="p-4 bg-blue-50 border-blue-200">
-            <p className="text-sm font-semibold text-slate-900 mb-1">How it works</p>
+            <p className="text-sm font-semibold text-slate-900 mb-1">
+              How it works
+            </p>
             <p className="text-sm text-slate-700">
-              We've prepared a professional email template that politely questions the flagged charges without being confrontational.
+              We've prepared a professional email template that politely
+              questions the flagged charges without being confrontational.
             </p>
           </Card>
           <Card className="p-4 bg-green-50 border-green-200">
-            <p className="text-sm font-semibold text-slate-900 mb-1">Privacy First</p>
+            <p className="text-sm font-semibold text-slate-900 mb-1">
+              Privacy First
+            </p>
             <p className="text-sm text-slate-700">
-              This template is exclusively created and processed on your device. No data leaves your local machine unless you personally decide where and to whom it is delivered.
+              This template is exclusively created and processed on your device.
+              No data leaves your local machine unless you personally decide
+              where and to whom it is delivered.
             </p>
           </Card>
         </div>
 
         {/* Email Template */}
         <Card className="mb-8 p-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Email Template</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-4">
+            Email Template
+          </h2>
           <Textarea
             value={emailTemplate}
             onChange={(e) => setEmailTemplate(e.target.value)}
             className="w-full h-64 p-4 font-mono text-sm border border-slate-300 rounded-lg"
           />
           <p className="text-xs text-slate-500 mt-3">
-            Feel free to customize this template to match your personal style and add your specific details.
+            Feel free to customize this template to match your personal style
+            and add your specific details.
           </p>
         </Card>
 
         {/* Instructions */}
         <Card className="mb-8 p-6 bg-amber-50 border-amber-200">
-          <h3 className="font-semibold text-slate-900 mb-4">How to use this dispute kit:</h3>
+          <h3 className="font-semibold text-slate-900 mb-4">
+            How to use this dispute kit:
+          </h3>
           <ol className="space-y-3 text-sm text-slate-700">
             <li className="flex gap-3">
-              <span className="font-semibold text-amber-600 flex-shrink-0">1.</span>
-              <span>Customize the template with your specific details (name, dates, bill amount)</span>
+              <span className="font-semibold text-amber-600 flex-shrink-0">
+                1.
+              </span>
+              <span>
+                Customize the template with your specific details (name, dates,
+                bill amount)
+              </span>
             </li>
             <li className="flex gap-3">
-              <span className="font-semibold text-amber-600 flex-shrink-0">2.</span>
-              <span>Find the billing department contact information from your hospital bill</span>
+              <span className="font-semibold text-amber-600 flex-shrink-0">
+                2.
+              </span>
+              <span>
+                Find the billing department contact information from your
+                hospital bill
+              </span>
             </li>
             <li className="flex gap-3">
-              <span className="font-semibold text-amber-600 flex-shrink-0">3.</span>
+              <span className="font-semibold text-amber-600 flex-shrink-0">
+                3.
+              </span>
               <span>Send the email and keep a copy for your records</span>
             </li>
             <li className="flex gap-3">
-              <span className="font-semibold text-amber-600 flex-shrink-0">4.</span>
-              <span>Follow up in 5-7 business days if you don't receive a response</span>
+              <span className="font-semibold text-amber-600 flex-shrink-0">
+                4.
+              </span>
+              <span>
+                Follow up in 5-7 business days if you don't receive a response
+              </span>
             </li>
           </ol>
         </Card>
 
         {/* Action Buttons */}
         <div className="flex gap-3 mb-8">
-          <Button
-            onClick={handleCopy}
-            variant="outline"
-            className="flex-1"
-          >
+          <Button onClick={handleCopy} variant="outline" className="flex-1">
             <Copy className="w-4 h-4 mr-2" />
-            {copied ? 'Copied to Clipboard!' : 'Copy Template'}
+            {copied ? "Copied to Clipboard!" : "Copy Template"}
           </Button>
-          <Button
-            onClick={handleDownload}
-            variant="outline"
-            className="flex-1"
-          >
+          <Button onClick={handleDownload} variant="outline" className="flex-1">
             <Download className="w-4 h-4 mr-2" />
             Download as Text
           </Button>
-          <Button
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-          >
+          <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
             <Mail className="w-4 h-4 mr-2" />
             Open in Email
           </Button>
