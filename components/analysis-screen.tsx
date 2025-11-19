@@ -14,12 +14,7 @@ import {
 import {
   Tooltip,
 } from "@/components/ui/tooltip";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from "recharts";
 
 interface AnalysisScreenProps {
   billData: any;
@@ -79,6 +74,32 @@ export default function AnalysisScreen({
   if (pieChartData.length === 0 && analysis.summary.totalCharges > 0) {
     pieChartData.push({ name: "Valid Charges", value: analysis.summary.totalCharges, color: "#e2e8f0" });
   }
+
+  // Prepare pie chart data based on individual items
+  const pieChartData = [
+    // Add individual duplicate items
+    ...analysis.duplicates.map((item: any, index: number) => ({
+      name: item.item,
+      value: item.totalCharged,
+      color: ["#3b82f6", "#ef4444"][index] // Blue for Consultation Fee, Red for BP Check
+    })),
+    // Add individual benchmark issue items
+    ...analysis.benchmarkIssues.map((item: any, index: number) => ({
+      name: item.item,
+      value: item.charged,
+      color: "#10b981" // Green for MRI Scan
+    }))
+  ];
+
+  // Prepare bar chart data for detailed view
+  const barChartData = [
+    { name: "Total Charges", value: analysis.summary.totalCharges, color: "#6366f1" },
+    { name: "Flagged Amount", value: analysis.summary.flaggedAmount, color: "#ef4444" },
+    ...(analysisType === "v2" ? [{ name: "Your Responsibility", value: (analysis.summary as any).patientResponsibility, color: "#10b981" }] : []),
+    ...(analysisType === "v2" ? [{ name: "HMO Covered", value: (analysis.summary as any).hmoCovered || 0, color: "#8b5cf6" }] : []),
+    { name: "Duplicates", value: analysis.duplicates.reduce((sum, item) => sum + item.totalCharged, 0), color: "#f59e0b" },
+    { name: "Above Benchmark", value: analysis.benchmarkIssues.reduce((sum, item) => sum + item.charged, 0), color: "#ec4899" },
+  ];
 
   const handleCopy = () => {
     setCopied(true);
@@ -154,7 +175,7 @@ export default function AnalysisScreen({
         )}
 
         {/* Summary Cards */}
-        <div className="w-full mb-8 flex flex-col md:flex-row">
+        <div className="w-full mb-8 flex">
           <div
             className={`grid gap-4 w-full flex-1 ${analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
               }`}
@@ -190,13 +211,16 @@ export default function AnalysisScreen({
                   <Tooltip content="The amount you're responsible for after coverage." />
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  ₱{(analysis.summary.patientResponsibility || 0).toLocaleString()}
+                  ₱
+                  {
+                    (analysis.summary as any).patientResponsibility?.toLocaleString()
+                  }
                 </p>
               </Card>
             )}
           </div>
           {/* Charts */}
-          <div className="flex-1 md:ml-6 mt-6 md:mt-0 flex items-center justify-center min-h-[400px]">
+          <div className="flex-1 ml-6 flex items-center justify-center min-h-[400px]">
             {/* Pie Chart (Detailed Analysis) */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full h-full flex flex-col justify-between">
               <h3 className="text-lg font-semibold text-slate-900 text-center">Detailed Analysis</h3>
@@ -206,8 +230,9 @@ export default function AnalysisScreen({
                     <Pie
                       data={pieChartData}
                       cx="50%"
-                      cy={`${analysisType === "v2" ? "40%" : "50%"
-                        }`}
+                      cy={`${
+                        analysisType === "v2" ? "40%" : "50%"
+                      }`}
                       innerRadius={80}
                       outerRadius={120}
                       paddingAngle={2}
@@ -218,14 +243,14 @@ export default function AnalysisScreen({
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Legend
-                      layout="horizontal"
-                      verticalAlign="bottom"
+                    <Legend 
+                      layout="horizontal" 
+                      verticalAlign="bottom" 
                       align="center"
                       wrapperStyle={{ paddingTop: '16px' }}
                       formatter={(value, entry, index) => {
                         const item = pieChartData[index];
-                        const percentage = analysis.summary.totalCharges > 0 ? ((item.value / analysis.summary.totalCharges) * 100).toFixed(1) : "0.0";
+                        const percentage = ((item.value / analysis.summary.totalCharges) * 100).toFixed(1);
                         return (
                           <span className="text-slate-700 text-sm">
                             {item.name}: {percentage}%
@@ -239,7 +264,7 @@ export default function AnalysisScreen({
                           return (
                             <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="central">
                               <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-xl font-bold">
-                                ₱{((analysis.summary.totalCharges || 0) / 1000).toFixed(1)}k
+                                ₱{(analysis.summary.totalCharges / 1000).toFixed(1)}k
                               </tspan>
                               <tspan x={viewBox.cx} y={viewBox.cy + 20} className="fill-slate-600 text-sm">
                                 Total
@@ -402,13 +427,37 @@ export default function AnalysisScreen({
             <Copy className="w-4 h-4 mr-2" />
             {copied ? "Copied!" : "Copy Report"}
           </Button>
-
-          <Button
-            onClick={onReturnHome}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
-          >
-            Finish Analysis
-          </Button>
+          {analysis.hasDiscrepancies ? (
+            <Button
+              onClick={onComplete}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Apply for Reassessment →
+            </Button>
+          ) : (
+            <Button
+              onClick={returnHome}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-white"
+              >
+                <path
+                  d="M20 6L9 17L4 12"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Finish
+            </Button>
+          )}
         </div>
       </div>
 
