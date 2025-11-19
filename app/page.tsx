@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import UploadScreen from '@/components/upload-screen';
 import TriageScreen from '@/components/triage-screen';
+import LoaderScreen from '@/components/loader-screen';
 import AnalysisScreen from '@/components/analysis-screen';
-import DisputeKitScreen from '@/components/dispute-kit-screen';
+import ReassessmentScreen from '@/components/reassessment-screen';
 
 export default function Home() {
-  const [stage, setStage] = useState<'upload' | 'triage' | 'analysis' | 'dispute'>('upload');
+  const [stage, setStage] = useState<'upload' | 'triage' | 'loading' | 'analysis' | 'reassessment'>('upload');
   const [billData, setBillData] = useState<any>(null);
   const [analysisType, setAnalysisType] = useState<'v1' | 'v2' | null>(null);
 
@@ -18,11 +19,15 @@ export default function Home() {
 
   const handleTriageSelect = (type: 'v1' | 'v2') => {
     setAnalysisType(type);
-    setStage('analysis');
+    setStage('loading');
+    // Simulate analysis processing time
+    setTimeout(() => {
+      setStage('analysis');
+    }, 4000);
   };
 
   const handleAnalysisComplete = () => {
-    setStage('dispute');
+    setStage('reassessment');
   };
 
   const handleReset = () => {
@@ -35,6 +40,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {stage === 'upload' && <UploadScreen onComplete={handleUploadComplete} />}
       {stage === 'triage' && <TriageScreen onSelect={handleTriageSelect} />}
+      {stage === 'loading' && <LoaderScreen />}
       {stage === 'analysis' && (
         <AnalysisScreen
           billData={billData}
@@ -43,8 +49,8 @@ export default function Home() {
           onBack={() => setStage('triage')}
         />
       )}
-      {stage === 'dispute' && (
-        <DisputeKitScreen
+      {stage === 'reassessment' && (
+        <ReassessmentScreen
           billData={billData}
           onBack={handleReset}
         />

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle, Copy, Share2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Copy, Share2, X } from 'lucide-react';
 
 interface AnalysisScreenProps {
   billData: any;
@@ -16,8 +16,8 @@ interface AnalysisScreenProps {
 // Mock analysis data
 const mockAnalysisV1 = {
   duplicates: [
-    { item: 'Consultation Fee', occurrences: 2, totalCharged: 2000 },
-    { item: 'Blood Pressure Check', occurrences: 2, totalCharged: 600 },
+    { item: 'Consultation Fee', occurrences: 2, totalCharged: 2000, facility: 'Metro Medical Center' },
+    { item: 'Blood Pressure Check', occurrences: 2, totalCharged: 600, facility: 'Metro Medical Center' },
   ],
   benchmarkIssues: [
     {
@@ -50,6 +50,11 @@ const mockAnalysisV2 = {
   },
 };
 
+interface IssueDetail {
+  type: 'duplicate' | 'benchmark';
+  data: any;
+}
+
 export default function AnalysisScreen({
   billData,
   analysisType,
@@ -57,6 +62,7 @@ export default function AnalysisScreen({
   onBack,
 }: AnalysisScreenProps) {
   const [copied, setCopied] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
   const analysis = analysisType === 'v1' ? mockAnalysisV1 : mockAnalysisV2;
 
   const handleCopy = () => {
@@ -117,7 +123,11 @@ export default function AnalysisScreen({
               </div>
               <div className="space-y-3">
                 {analysis.duplicates.map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedIssue({ type: 'duplicate', data: item })}
+                    className="flex justify-between items-start p-3 bg-orange-50 rounded-lg border border-orange-200 cursor-pointer hover:shadow-md hover:border-orange-400 transition-all"
+                  >
                     <div>
                       <p className="font-medium text-slate-900">{item.item}</p>
                       <p className="text-sm text-slate-600">Charged {item.occurrences} times</p>
@@ -138,7 +148,11 @@ export default function AnalysisScreen({
               </div>
               <div className="space-y-3">
                 {analysis.benchmarkIssues.map((item: any, idx: number) => (
-                  <div key={idx} className="p-4 bg-red-50 rounded-lg border border-red-200">
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedIssue({ type: 'benchmark', data: item })}
+                    className="p-4 bg-red-50 rounded-lg border border-red-200 cursor-pointer hover:shadow-md hover:border-red-400 transition-all"
+                  >
                     <p className="font-medium text-slate-900 mb-2">{item.item}</p>
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
@@ -203,10 +217,114 @@ export default function AnalysisScreen({
             onClick={onComplete}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            Next: Dispute Kit →
+            Next: Apply for Reassessment →
           </Button>
         </div>
       </div>
+
+      {selectedIssue && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-1">
+                    {selectedIssue.data.item}
+                  </h2>
+                  <p className="text-sm text-slate-600">
+                    {selectedIssue.type === 'duplicate' ? 'Duplicate Charge Issue' : 'Pricing Variance Issue'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedIssue(null)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Issue Details */}
+              <div className="mb-6 p-4 bg-slate-50 rounded-lg">
+                <h3 className="font-semibold text-slate-900 mb-4">Issue Breakdown</h3>
+                {selectedIssue.type === 'duplicate' ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Number of Occurrences:</span>
+                      <span className="font-semibold text-slate-900">{selectedIssue.data.occurrences}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Total Amount Charged:</span>
+                      <span className="font-semibold text-orange-600">₱{selectedIssue.data.totalCharged.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Facility:</span>
+                      <span className="font-semibold text-slate-900">{selectedIssue.data.facility}</span>
+                    </div>
+                    <div className="border-t pt-3">
+                      <p className="text-sm text-slate-600 mb-2">Recommendation:</p>
+                      <p className="text-sm text-slate-900">Only one instance of this charge should appear on your bill. Contact the facility to request removal of duplicate entries.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Charged Amount:</span>
+                      <span className="font-semibold text-slate-900">₱{selectedIssue.data.charged.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Regional Benchmark:</span>
+                      <span className="font-semibold text-slate-900">₱{selectedIssue.data.benchmark.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Variance:</span>
+                      <span className="font-semibold text-red-600">{selectedIssue.data.variance}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Facility:</span>
+                      <span className="font-semibold text-slate-900">{selectedIssue.data.facility}</span>
+                    </div>
+                    <div className="border-t pt-3">
+                      <p className="text-sm text-slate-600 mb-2">Recommendation:</p>
+                      <p className="text-sm text-slate-900">This charge is significantly above regional averages. Request an itemized breakdown and compare with other facilities' rates.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* PDF Highlight Placeholder */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-slate-900 mb-3">Bill Reference</h3>
+                <div className="bg-slate-100 rounded-lg p-8 text-center border-2 border-dashed border-slate-300">
+                  <p className="text-slate-600 mb-2">📄 PDF Viewer with Highlighted Text</p>
+                  <p className="text-sm text-slate-500">Relevant section of your bill will be highlighted here</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedIssue(null)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+                <Button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    // Copy to clipboard for dispute template
+                    const issueText = `${selectedIssue.data.item}: ${selectedIssue.type === 'duplicate' ? `Charged ${selectedIssue.data.occurrences} times for ₱${selectedIssue.data.totalCharged}` : `₱${selectedIssue.data.charged} (Benchmark: ₱${selectedIssue.data.benchmark})`}`;
+                    navigator.clipboard.writeText(issueText);
+                    alert('Issue details copied to clipboard');
+                  }}
+                >
+                  Copy to Reassessment
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
