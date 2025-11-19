@@ -164,50 +164,49 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
       </Card>
 
       {showTosModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <Card className="w-full max-w-2xl max-h-96 overflow-y-auto">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold text-slate-900">Terms of Service & Privacy Policy</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-5 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <Card className="w-full max-w-md max-h-[85vh] flex flex-col bg-white">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+              <h2 className="text-lg font-bold text-slate-900">Terms & Privacy</h2>
               <button
                 onClick={() => setShowTosModal(false)}
                 className="text-slate-500 hover:text-slate-700"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-4 text-slate-700 text-sm">
+            <div className="p-4 space-y-3 text-slate-700 text-xs overflow-y-auto flex-1">
               <section>
-                <h3 className="font-bold text-slate-900 mb-2">Data Protection & Privacy (RA 10173)</h3>
-                <p>
-                  Fee-ver is committed to protecting your personal data in compliance with the Data Privacy Act of 2012 (RA 10173). We are transparent about how we handle your medical bill information.
+                <h3 className="font-bold text-slate-900 mb-1">1. Data Protection (RA 10173)</h3>
+                <p className="leading-relaxed">
+                  Fee-ver complies with the Data Privacy Act of 2012. Your medical bill information is protected and never shared without consent.
                 </p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 mb-2">Your Rights</h3>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Right to be informed about data collection and usage</li>
-                  <li>Right to access your personal data</li>
+                <h3 className="font-bold text-slate-900 mb-1">2. Your Rights</h3>
+                <ul className="list-disc list-inside space-y-0.5 leading-relaxed">
+                  <li>Right to access your data</li>
                   <li>Right to correct inaccurate data</li>
-                  <li>Right to delete your data upon request</li>
-                  <li>Right to object to unauthorized processing</li>
+                  <li>Right to delete your data</li>
+                  <li>Right to object to processing</li>
                 </ul>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 mb-2">How We Use Your Data</h3>
-                <p>
-                  Your medical bill is processed 100% on your device. We do not store or transmit your bill data without explicit consent. Any anonymized pricing insights you choose to share help improve our fee benchmarking database.
+                <h3 className="font-bold text-slate-900 mb-1">3. How We Use Your Data</h3>
+                <p className="leading-relaxed">
+                  Your bill is processed 100% on your device. We only store anonymized pricing data if you opt in.
                 </p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 mb-2">Data Security</h3>
-                <p>
-                  All processing happens locally in your browser. Your sensitive health and financial information never leaves your device unless you explicitly choose to contribute anonymized data.
+                <h3 className="font-bold text-slate-900 mb-1">4. Data Security</h3>
+                <p className="leading-relaxed">
+                  All processing happens locally in your browser. Your data never leaves your device.
                 </p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 mb-2">Contact Us</h3>
-                <p>
-                  For privacy concerns or to exercise your rights under RA 10173, please contact our Data Protection Officer at privacy@fever.com
+                <h3 className="font-bold text-slate-900 mb-1">5. Contact</h3>
+                <p className="leading-relaxed">
+                  Privacy concerns? Email privacy@fever.com
                 </p>
               </section>
             </div>
