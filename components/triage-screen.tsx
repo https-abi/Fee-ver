@@ -3,15 +3,45 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CreditCard, FileCheck, ChevronDown } from 'lucide-react';
+import { CreditCard, FileCheck, ChevronDown, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TriageScreenProps {
-  onSelect: (type: 'v1' | 'v2', hmoProvider?: string) => void;
+  // Receives the file from the parent
+  uploadData: { file: File; contributeData: boolean };
+  // Callbacks to manage global state
+  onAnalysisStart: () => void;
+  onAnalysisComplete: (result: any, type: 'v1' | 'v2') => void;
 }
 
-export default function TriageScreen({ onSelect }: TriageScreenProps) {
+const PROMPT_DIRECT = `
+System Prompt for qwen-vl-ocr (Direct Payment):
+You are an expert OCR assistant for Philippine medical bills. Analyze the image and extract billing information.
+Return valid JSON: { "items": [{"description": "string", "price": number}], "total": number }.
+Rules:
+1. Prioritize "Hospital Charges", "Professional Fees", "Medicines".
+2. Strip currency symbols.
+3. Use total line amount (quantity * unit price).
+4. Exclude non-charge entries.
+5. Output ONLY valid JSON.
+`;
+
+const PROMPT_HMO = `
+System Prompt for qwen-vl-ocr (HMO/Insurance):
+You are an expert OCR assistant for Philippine medical bills paid via HMO.
+Analyze the image and extract billing information, paying close attention to coverage.
+Return valid JSON: { "items": [{"description": "string", "price": number}], "total": number }.
+Rules:
+1. Prioritize "Hospital Charges", "Professional Fees".
+2. If an item has an "HMO Covered" portion, extract the FULL price in the items list.
+3. Strip currency symbols.
+4. Output ONLY valid JSON.
+`;
+
+export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisComplete }: TriageScreenProps) {
   const [showHmoDropdown, setShowHmoDropdown] = useState(false);
   const [selectedHmo, setSelectedHmo] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const hmoProviders = [
     { full: 'United Coconut Planters Life Assurance Corporation', short: 'Cocolife' },
@@ -28,9 +58,53 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
     setShowHmoDropdown(false);
   };
 
-  const handleProceedWithHmo = () => {
-    if (selectedHmo) {
-      onSelect('v2', selectedHmo);
+  const analyzeBill = async (type: 'v1' | 'v2') => {
+    if (!uploadData?.file) {
+      setError("File missing. Please restart the process.");
+      return;
+    }
+
+    setError(null);
+    onAnalysisStart(); // Trigger Loader Screen
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadData.file);
+      formData.append('user', 'user-' + Date.now());
+      formData.append('contributeData', String(uploadData.contributeData));
+
+      // Select prompt based on button pressed
+      const prompt = type === 'v1' ? PROMPT_DIRECT : PROMPT_HMO;
+      formData.append('prompt', prompt);
+
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze document.');
+      }
+
+      // Add HMO provider info if v2
+      const finalResult = {
+        ...data,
+        hmoProvider: type === 'v2' ? selectedHmo : undefined
+      };
+
+      onAnalysisComplete(finalResult, type);
+
+    } catch (err: any) {
+      console.error("Analysis Error:", err);
+      setError(err.message || "An error occurred during analysis.");
+      // You might want a callback to stop the loader here if you handle errors in this component,
+      // but currently the parent switches to LoaderScreen. 
+      // ideally, we'd pass an onError callback to the parent to switch back to Triage.
+      // For now, we'll just alert.
+      alert(`Error: ${err.message}`);
+      // Reload or reset logic would go here
     }
   };
 
@@ -42,10 +116,17 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
           <p className="text-slate-600">This helps us analyze your bill correctly</p>
         </div>
 
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="w-4 h-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-2 gap-6">
           {/* Option 1: Cash Payment */}
           <Card
-            onClick={() => onSelect('v1')}
+            onClick={() => analyzeBill('v1')}
             className="cursor-pointer hover:shadow-lg hover:border-blue-500 transition-all p-6 border-2 flex flex-col justify-between"
           >
             <div className="flex flex-col">
@@ -68,9 +149,7 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
           </Card>
 
           {/* Option 2: HMO with LOA */}
-          <Card
-            className="p-6 border-2 flex flex-col justify-between"
-          >
+          <Card className="p-6 border-2 flex flex-col justify-between">
             <div className="flex flex-col">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -102,9 +181,8 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
                       <button
                         key={provider.short}
                         onClick={() => handleHmoSelect(provider)}
-                        className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors first:rounded-t-lg last:rounded-b-lg border-b last:border-b-0 border-slate-100 ${
-                          selectedHmo === provider.short ? 'bg-blue-100 text-blue-900 font-semibold' : 'text-slate-900'
-                        }`}
+                        className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors first:rounded-t-lg last:rounded-b-lg border-b last:border-b-0 border-slate-100 ${selectedHmo === provider.short ? 'bg-blue-100 text-blue-900 font-semibold' : 'text-slate-900'
+                          }`}
                       >
                         <p className="font-medium">{provider.full}</p>
                         <p className="text-xs text-slate-500">({provider.short})</p>
@@ -116,7 +194,7 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
             </div>
 
             <Button
-              onClick={handleProceedWithHmo}
+              onClick={() => analyzeBill('v2')}
               disabled={!selectedHmo}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
@@ -126,7 +204,7 @@ export default function TriageScreen({ onSelect }: TriageScreenProps) {
         </div>
 
         <p className="text-xs text-slate-500 text-center mt-8">
-          Both analyses are conducted 100% on your device. Your data never leaves your browser.
+          Both analyses are conducted 100% on your device (via secure API).
         </p>
       </div>
     </div>

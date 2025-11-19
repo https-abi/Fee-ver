@@ -11,27 +11,32 @@ export default function Home() {
   const [stage, setStage] = useState<
     "upload" | "triage" | "loading" | "analysis" | "reassessment"
   >("upload");
+
+  // Store the file data here so it can be passed to Triage
+  const [uploadData, setUploadData] = useState<{ file: File; contributeData: boolean } | null>(null);
+
   const [billData, setBillData] = useState<any>(null);
   const [analysisType, setAnalysisType] = useState<"v1" | "v2" | null>(null);
 
-  const handleUploadComplete = (data: any) => {
-    setBillData(data);
+  // Called when user finishes the Upload screen (clicked Continue)
+  const handleUploadComplete = (data: { file: File; contributeData: boolean }) => {
+    setUploadData(data);
     setStage("triage");
   };
 
-  const handleTriageSelect = (type: "v1" | "v2", hmoProvider?: string) => {
-    setAnalysisType(type);
-    if (hmoProvider) {
-      setBillData({ ...billData, hmoProvider });
-    }
+  // Called by Triage when API request starts
+  const handleAnalysisStart = () => {
     setStage("loading");
-    // Simulate analysis processing time
-    setTimeout(() => {
-      setStage("analysis");
-    }, 4000);
   };
 
-  const handleAnalysisComplete = () => {
+  // Called by Triage when API returns data
+  const handleAnalysisComplete = (result: any, type: 'v1' | 'v2') => {
+    setBillData(result);
+    setAnalysisType(type);
+    setStage("analysis");
+  };
+
+  const handleAnalysisDone = () => {
     setStage("reassessment");
   };
 
@@ -39,22 +44,33 @@ export default function Home() {
     setStage("upload");
     setBillData(null);
     setAnalysisType(null);
+    setUploadData(null);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {stage === "upload" && <UploadScreen onComplete={handleUploadComplete} />}
-      {stage === "triage" && <TriageScreen onSelect={handleTriageSelect} />}
+
+      {stage === "triage" && uploadData && (
+        <TriageScreen
+          uploadData={uploadData}
+          onAnalysisStart={handleAnalysisStart}
+          onAnalysisComplete={handleAnalysisComplete}
+        />
+      )}
+
       {stage === "loading" && <LoaderScreen />}
-      {stage === "analysis" && (
+
+      {stage === "analysis" && billData && (
         <AnalysisScreen
           billData={billData}
           analysisType={analysisType!}
-          onComplete={handleAnalysisComplete}
+          onComplete={handleAnalysisDone}
           onBack={() => setStage("triage")}
-          onReturnHome={() => setStage("upload")}
+          onReturnHome={handleReset}
         />
       )}
+
       {stage === "reassessment" && (
         <ReassessmentScreen billData={billData} onBack={handleReset} />
       )}
