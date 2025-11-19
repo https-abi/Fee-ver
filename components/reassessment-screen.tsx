@@ -11,61 +11,112 @@ interface DisputeKitScreenProps {
   onBack: () => void;
 }
 
-const generateEmailTemplate = () => {
-  return `Subject: Request for Bill Review and Itemization - Polite Inquiry
+const formatAmount = (amount: number) => `₱${(amount || 0).toLocaleString()}`;
+
+const generateEmailTemplate = (data: any) => {
+  const issues = [];
+  let totalFlaggedAmount = data.summary.flaggedAmount || 0;
+
+  // --- 1. DUPLICATE CHARGES ---
+  if (data.duplicates && data.duplicates.length > 0) {
+    issues.push("1. DUPLICATE CHARGES");
+    data.duplicates.forEach((item: any) => {
+      issues.push(`- ${item.item} appears to be charged ${item.occurrences} times for a total of ${formatAmount(item.totalCharged)}.`);
+    });
+    issues.push(`\nQuery: Could you please confirm if multiple charges for these items are correct, or if this represents a billing system error?`);
+  }
+
+  // --- 2. PRICE INTEGRITY ISSUES ---
+  if (data.benchmarkIssues && data.benchmarkIssues.length > 0) {
+    if (issues.length > 0) issues.push("\n"); // Add spacing if duplicates exist
+    issues.push("2. PRICE INTEGRITY AUDIT (Charges Above Fair Market Value)");
+    data.benchmarkIssues.forEach((item: any) => {
+      issues.push(`- ${item.item}: Charged ${formatAmount(item.charged)} (Fair Market Value Est.: ${formatAmount(item.benchmark)}) - Variance: ${item.variance}.`);
+    });
+    issues.push(`\nQuery: Could you provide justification for this price variance compared to regional fair market estimates?`);
+  }
+
+  if (issues.length === 0) {
+    issues.push("No specific anomalies were found in the uploaded analysis data to automatically generate an itemized dispute list.");
+    issues.push("Please review the bill manually or ensure the analysis ran correctly.");
+    totalFlaggedAmount = data.summary.totalCharges || 0;
+  }
+
+  const issueList = issues.join('\n');
+  const totalCharges = data.summary.totalCharges || 0;
+  const balanceDue = data.summary.patientResponsibility || 0;
+
+
+  return `Subject: Request for Bill Review and Itemization - Account [PATIENT ID HERE]
 
 Dear Hospital Billing Department,
 
-I am writing to respectfully inquire about charges on my recent medical bill dated [DATE]. Upon careful review with the help of a medical bill analysis tool, I have identified several items that require clarification.
+I am writing to respectfully inquire about charges on my recent medical bill dated [DATE OF SERVICE END]. Upon careful review using Fee-ver, a medical bill analysis tool, I have identified potential discrepancies requiring clarification.
 
 The following charges appear to warrant further review:
 
-1. DUPLICATE CHARGES
-   - Consultation Fee appears to be charged twice (₱2,000)
-   - Blood Pressure Check appears to be charged twice (₱600)
-   
-   Query: Could you please confirm whether these services were provided twice, or if this represents a billing error?
+${issueList}
 
-2. CHARGES ABOVE BENCHMARK RATES
-   - MRI Scan: ₱15,000 (benchmark rate in our area: ₱12,000)
-   
-   Query: Could you provide justification for the variance from standard rates in our region?
+---
+ANALYSIS SUMMARY:
+Gross Total Charges on Bill: ${formatAmount(totalCharges)}
+Total Flagged Amount: ${formatAmount(totalFlaggedAmount)}
+Patient Responsibility (Amount Due): ${formatAmount(balanceDue)}
 
-TOTAL FLAGGED AMOUNT: ₱8,000 (17.8% of total bill)
+I trust this is a simple administrative matter and appreciate your prompt attention.
 
-I trust this is a simple administrative matter. I am happy to discuss this with your billing department at your earliest convenience.
+Please advise regarding the queries above and provide:
+1. Itemized documentation supporting the full charges.
+2. A revised bill if corrections based on duplicates or price variances are needed.
 
-Please advise:
-1. Confirmation of whether duplicate charges should appear on my statement
-2. Itemized explanation for charges above benchmark rates
-3. A revised bill if corrections are needed
-
-Thank you for your prompt attention to this matter. I look forward to your response.
+Thank you for your cooperation. I look forward to your response within 5-7 business days.
 
 Respectfully,
-[YOUR NAME]
-[YOUR CONTACT DETAILS]
-[PATIENT ID]`;
+[YOUR FULL NAME]
+[YOUR CONTACT DETAILS: Phone / Email]
+[PATIENT ID: PID 271387 - Found on bill]
+[ACCOUNT/BILL NUMBER: (Add if different from Patient ID)]`;
 };
 
-export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
-  const [emailTemplate, setEmailTemplate] = useState(generateEmailTemplate());
+export default function ReassessmentScreen({ billData, onBack }: DisputeKitScreenProps) {
+  const [emailTemplate, setEmailTemplate] = useState(generateEmailTemplate(billData));
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(emailTemplate);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // navigator.clipboard.writeText is generally more reliable in modern browsers
+    navigator.clipboard.writeText(emailTemplate).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => {
+      // Fallback for older browsers, though execCommand is restricted in some modern contexts
+      const textarea = document.createElement('textarea');
+      textarea.value = emailTemplate;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   const handleDownload = () => {
     const element = document.createElement("a");
+    // Use the name of the file if available, otherwise default
+    const fileName = billData?.fileName ? `dispute-kit-${billData.fileName.replace(/\.[^/.]+$/, "")}.txt` : "medical-bill-dispute-template.txt";
     const file = new Blob([emailTemplate], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
-    element.download = "medical-bill-dispute-template.txt";
+    element.download = fileName;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  const handleOpenEmail = () => {
+    const subject = encodeURIComponent("Request for Bill Review and Itemization - Account [PATIENT ID HERE]");
+    const body = encodeURIComponent(emailTemplate);
+    // Use a placeholder email address
+    window.location.href = `mailto:billing@hospital.com?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -95,11 +146,10 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
             </svg>
           </button>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Apply for a reassessment
+            Prepare for Reassessment
           </h1>
           <p className="text-slate-600">
-            Automatically draft an email with the details of the anomalies
-            found. Request a reassessment with a clear and professional tone.
+            Automatically draft a professional email based on the issues found.
           </p>
         </div>
 
@@ -107,21 +157,18 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
         <div className="grid md:grid-cols-2 gap-4 mb-8">
           <Card className="p-4 bg-blue-50 border-blue-200">
             <p className="text-sm font-semibold text-slate-900 mb-1">
-              How it works
+              Polite & Professional
             </p>
             <p className="text-sm text-slate-700">
-              We've prepared a professional email template that politely
-              questions the flagged charges without being confrontational.
+              The template uses formal language and focuses on questions, not accusations, to ensure quick resolution.
             </p>
           </Card>
           <Card className="p-4 bg-green-50 border-green-200">
             <p className="text-sm font-semibold text-slate-900 mb-1">
-              Privacy First
+              Data Included
             </p>
             <p className="text-sm text-slate-700">
-              This template is exclusively created and processed on your device.
-              No data leaves your local machine unless you personally decide
-              where and to whom it is delivered.
+              We've inserted all identified <b>duplicate charges</b> and <b>price integrity issues</b> directly into the body.
             </p>
           </Card>
         </div>
@@ -134,11 +181,10 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
           <Textarea
             value={emailTemplate}
             onChange={(e) => setEmailTemplate(e.target.value)}
-            className="w-full h-64 p-4 font-mono text-sm border border-slate-300 rounded-lg"
+            className="w-full h-96 p-4 font-mono text-sm border border-slate-300 rounded-lg"
           />
           <p className="text-xs text-slate-500 mt-3">
-            Feel free to customize this template to match your personal style
-            and add your specific details.
+            <b>Action Required:</b> Please customize the bracketed placeholders (`[YOUR FULL NAME]`, `[DATE]`, etc.) before sending.
           </p>
         </Card>
 
@@ -153,8 +199,7 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
                 1.
               </span>
               <span>
-                Customize the template with your specific details (name, dates,
-                bill amount)
+                Customize the template with your specific details (name, dates, patient ID)
               </span>
             </li>
             <li className="flex gap-3">
@@ -162,23 +207,14 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
                 2.
               </span>
               <span>
-                Find the billing department contact information from your
-                hospital bill
+                Find the hospital's billing email address on your bill or website
               </span>
             </li>
             <li className="flex gap-3">
               <span className="font-semibold text-amber-600 flex-shrink-0">
                 3.
               </span>
-              <span>Send the email and keep a copy for your records</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="font-semibold text-amber-600 flex-shrink-0">
-                4.
-              </span>
-              <span>
-                Follow up in 5-7 business days if you don't receive a response
-              </span>
+              <span>Copy or Open in Email, send the request, and save a record of the sent email.</span>
             </li>
           </ol>
         </Card>
@@ -193,7 +229,7 @@ export default function DisputeKitScreen({ onBack }: DisputeKitScreenProps) {
             <Download className="w-4 h-4 mr-2" />
             Download as Text
           </Button>
-          <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={handleOpenEmail} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
             <Mail className="w-4 h-4 mr-2" />
             Open in Email
           </Button>

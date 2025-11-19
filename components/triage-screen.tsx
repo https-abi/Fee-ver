@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { CreditCard, FileCheck, ChevronDown, AlertCircle } from 'lucide-react';
+import { CreditCard, FileCheck, ChevronDown, AlertCircle, Eye, AlertOctagon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TriageScreenProps {
@@ -14,8 +14,9 @@ interface TriageScreenProps {
   onAnalysisComplete: (result: any, type: 'v1' | 'v2') => void;
 }
 
-const PROMPT_DIRECT = `
-System Prompt for qwen-vl-max (Direct Payment):
+// Renamed from PROMPT_DIRECT/PROMPT_HMO to PROMPT_V1 for consistency with the new flow
+const PROMPT_V1 = `
+System Prompt for qwen-vl-max (Itemized Error Analysis):
 You are an expert medical bill analyzer. 
 STEP 1: VISUAL OBSERVATION
 Start by providing a "DEBUG REPORT": Describe the document layout, visible headers, hospital name (if any), and the general structure of the charges. State clearly what kind of document this is.
@@ -37,59 +38,19 @@ Rules:
 5. Output the valid JSON block at the end of your response.
 `;
 
-const PROMPT_HMO = `
-System Prompt for qwen-vl-max (HMO/Insurance):
-You are an expert medical bill analyzer for HMO claims.
-STEP 1: VISUAL OBSERVATION
-Start by providing a "DEBUG REPORT": Describe the document. Look for "Total Charges", "Amount Due", and any lines or columns indicating "HMO", "PhilHealth", "Discount", or "Payment".
-
-STEP 2: DATA EXTRACTION
-Extract the billing information into a valid JSON object.
-Format: 
-{ 
-  "charges": [{"description": "string", "amount": number}], 
-  "deductions": [{"description": "string", "amount": number}],
-  "total_charges": number,
-  "balance_due": number
-}
-
-Rules:
-1. "charges": List ALL services and items billed. Use the GROSS amount (before deduction).
-2. "deductions": List ALL subtractions found. This includes:
-   - Line items like "Senior Citizen Discount", "Payment", "Deposit".
-   - Columns labeled "HMO", "PhilHealth", "Approved Amount".
-3. If a deduction is embedded in a column (e.g., "HMO" column next to "Actual Charges"), extract it as a "deduction" item named "HMO Coverage for [Item Name]".
-4. "balance_due": The final "Amount Due" or "Patient Share" at the bottom.
-5. Output the valid JSON block at the end of your response.
-`;
-
 export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisComplete }: TriageScreenProps) {
-  const [showHmoDropdown, setShowHmoDropdown] = useState(false);
-  const [selectedHmo, setSelectedHmo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showHmoDisclaimer, setShowHmoDisclaimer] = useState(false);
 
-  const hmoProviders = [
-    { full: 'United Coconut Planters Life Assurance Corporation', short: 'Cocolife' },
-    { full: 'Asalus Corporation', short: 'Intellicare' },
-    { full: 'Maxicare Healthcare Corporation', short: 'Maxicare' },
-    { full: 'MediCard Philippines, Inc.', short: 'MediCard' },
-    { full: 'Medicare Plus, Inc.', short: 'Medicare' },
-    { full: 'Philippine Health Insurance Corporation', short: 'PhilHealth' },
-    { full: 'Value Care Health Systems, Inc.', short: 'Valuecare' }
-  ];
-
-  const handleHmoSelect = (provider: typeof hmoProviders[0]) => {
-    setSelectedHmo(provider.short);
-    setShowHmoDropdown(false);
-  };
-
-  const analyzeBill = async (type: 'v1' | 'v2') => {
+  // This function will only run the V1 analysis since the HMO feature is postponed.
+  const analyzeBill = async (type: 'v1') => {
     if (!uploadData?.file) {
       setError("File missing. Please restart the process.");
       return;
     }
 
     setError(null);
+    setShowHmoDisclaimer(false);
     onAnalysisStart(); // Trigger Loader Screen
 
     try {
@@ -98,9 +59,8 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
       formData.append('user', 'user-' + Date.now());
       formData.append('contributeData', String(uploadData.contributeData));
 
-      // Select prompt based on button pressed
-      const prompt = type === 'v1' ? PROMPT_DIRECT : PROMPT_HMO;
-      formData.append('prompt', prompt);
+      // Always use the V1 analysis prompt for now
+      formData.append('prompt', PROMPT_V1);
 
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -113,13 +73,8 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
         throw new Error(data.error || 'Failed to analyze document.');
       }
 
-      // Add HMO provider info if v2
-      const finalResult = {
-        ...data,
-        hmoProvider: type === 'v2' ? selectedHmo : undefined
-      };
-
-      onAnalysisComplete(finalResult, type);
+      // We pass 'v1' as the analysis type, even if the user originally selected Option 2
+      onAnalysisComplete(data, 'v1');
 
     } catch (err: any) {
       console.error("Analysis Error:", err);
@@ -127,13 +82,52 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
       alert(`Error: ${err.message}`);
     }
   };
+  
+  // This helper function handles the action inside the disclaimer message
+  const handleProceedWithV1 = () => {
+    analyzeBill('v1');
+  };
+
+  if (showHmoDisclaimer) {
+      return (
+        <div className="min-h-screen flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-2xl">
+                <Card className="p-6 border-blue-400 bg-blue-50 text-center">
+                    <AlertOctagon className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-slate-900 mb-2">Feature Scheduled for Next Release</h2>
+                    <p className="text-slate-700 mb-6">
+                        The full "Check Coverage Discrepancies (HMO/LOA)" feature is scheduled for our next release. 
+                        Our V1 analysis focuses on maximizing **transparency and pricing validation**.
+                    </p>
+                    <Button 
+                        onClick={handleProceedWithV1}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                        Click here to return and check your itemized charges (Recommended)
+                    </Button>
+                    <Button 
+                        onClick={() => setShowHmoDisclaimer(false)} 
+                        variant="ghost" 
+                        className="w-full mt-2 text-slate-600"
+                    >
+                        Go back to main options
+                    </Button>
+                </Card>
+            </div>
+        </div>
+      );
+  }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">How did you pay?</h1>
-          <p className="text-slate-600">This helps us analyze your bill correctly</p>
+          {/* Updated Welcome Message */}
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+            Welcome! What do you need <span className="text-blue-600">Fee-ver</span> to check on your bill?
+          </h1>
+          <p className="text-slate-600">This helps us focus the analysis.</p>
         </div>
 
         {error && (
@@ -143,92 +137,62 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
           </Alert>
         )}
 
-        <div className="grid grid-cols-2 gap-18 relative">
-          {/* Option 1: Cash Payment */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Option 1: Analyze Price and Itemized Errors */}
           <Card
             onClick={() => analyzeBill('v1')}
-            className="cursor-pointer transition-all p-6 border-2 flex flex-col justify-between"
+            className="cursor-pointer hover:shadow-lg hover:border-blue-500 transition-all p-6 border-2 flex flex-col justify-between"
           >
             <div className="flex flex-col">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <CreditCard className="w-6 h-6 text-green-600" />
+                  <Eye className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="text-left">
-                  <h2 className="text-lg font-bold text-slate-900">Direct Payment</h2>
-                  <p className="text-xs text-slate-500">Quick analysis of your out-of-pocket costs</p>
+                  <h2 className="text-lg font-bold text-slate-900">Analyze Price and Itemized Errors</h2>
+                  <p className="text-xs text-slate-500">Price integrity, duplicate and error check.</p>
                 </div>
               </div>
               <p className="text-slate-600 text-sm mb-6">
-                I have settled the bill directly with the provider, without the use of an HMO.
+                For cash payers, balance bill payers, or anyone who suspects an overcharge.
               </p>
             </div>
             <Button className="w-full bg-green-600 hover:bg-green-700">
-              Select This
+              Select
             </Button>
           </Card>
 
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <span className="text-slate-500 font-medium">or</span>
-          </div>
-
-          {/* Option 2: HMO with LOA */}
-          <Card className="p-6 border-2 flex flex-col justify-between">
+          {/* Option 2: Check Coverage Discrepancies (HMO/LOA) */}
+          <Card 
+            onClick={() => setShowHmoDisclaimer(true)}
+            className="cursor-pointer hover:shadow-lg hover:border-blue-500 transition-all p-6 border-2 flex flex-col justify-between opacity-70"
+          >
             <div className="flex flex-col">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <FileCheck className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="text-left">
-                  <h2 className="text-lg font-bold text-slate-900">HMO with LOA</h2>
-                  <p className="text-xs text-slate-500">Advanced analysis with insurance coverage details</p>
+                  <h2 className="text-lg font-bold text-slate-900">Check Coverage Discrepancies</h2>
+                  <p className="text-xs text-slate-500">Advanced analysis for HMO/LOA bills.</p>
                 </div>
               </div>
               <p className="text-slate-600 text-sm mb-6">
-                I used a Health Mandated Organization (HMO) and have my Letter of Authorization (LOA)
+                Compare billed vs. covered amounts to find insurance payment errors.
               </p>
-
-              <div className="relative mb-2">
-                <button
-                  onClick={() => setShowHmoDropdown(!showHmoDropdown)}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg flex items-center justify-between hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                >
-                  <span className={selectedHmo ? 'text-slate-900' : 'text-slate-500'}>
-                    {selectedHmo || 'Select your HMO provider'}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showHmoDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showHmoDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-300 rounded-lg shadow-lg z-10 max-h-56 overflow-y-auto">
-                    {hmoProviders.map((provider) => (
-                      <button
-                        key={provider.short}
-                        onClick={() => handleHmoSelect(provider)}
-                        className={`w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors first:rounded-t-lg last:rounded-b-lg border-b last:border-b-0 border-slate-100 ${selectedHmo === provider.short ? 'bg-blue-100 text-blue-900 font-semibold' : 'text-slate-900'
-                          }`}
-                      >
-                        <p className="font-medium">{provider.full}</p>
-                        <p className="text-xs text-slate-500">({provider.short})</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             <Button
-              onClick={() => analyzeBill('v2')}
-              disabled={!selectedHmo}
+              disabled
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
-              Select This
+              Scheduled for Next Release
             </Button>
           </Card>
         </div>
 
         <p className="text-xs text-slate-500 text-center mt-8">
-          Both analyses are conducted 100% on your device (via secure API).
+          All analysis is performed securely using Qwen-VL-Max.
         </p>
       </div>
     </div>

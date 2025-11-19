@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,51 +12,52 @@ interface UploadScreenProps {
 }
 
 export default function UploadScreen({ onComplete }: UploadScreenProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [consentChecked, setConsentChecked] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [contributeData, setContributeData] = useState(false);
-  const [showTosModal, setShowTosModal] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null)
+  const [consentChecked, setConsentChecked] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [contributeData, setContributeData] = useState(false)
+  const [showTosModal, setShowTosModal] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
+    const selectedFile = e.target.files?.[0]
     if (selectedFile) {
-      const validTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+      // NOTE: PDF support is currently removed per user request. This list keeps images only.
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg']
       if (validTypes.includes(selectedFile.type)) {
-        setFile(selectedFile);
-        setError(null);
+        setFile(selectedFile)
+        setError(null)
       } else {
-        setError("Please upload a PDF, PNG, JPG, or JPEG file");
-        setFile(null);
+        setError('Please upload a PNG, JPG, or JPEG file')
+        setFile(null)
       }
     }
-  };
+  }
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    e.preventDefault()
+    e.stopPropagation()
+  }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const droppedFile = e.dataTransfer.files?.[0];
+    e.preventDefault()
+    e.stopPropagation()
+    const droppedFile = e.dataTransfer.files?.[0]
     if (droppedFile) {
-      const validTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg']
       if (validTypes.includes(droppedFile.type)) {
-        setFile(droppedFile);
-        setError(null);
+        setFile(droppedFile)
+        setError(null)
       } else {
-        setError("Please drop a PDF, PNG, JPG, or JPEG file");
+        setError('Please drop a PNG, JPG, or JPEG file')
       }
     }
-  };
+  }
 
   const handleContinue = () => {
     if (!file || !consentChecked) {
-      setError("Please upload a file and accept the consent");
-      return;
+      setError('Please upload a file and accept the consent')
+      return
     }
     onComplete({ file, contributeData });
   };
@@ -87,11 +88,13 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
             <p className="text-sm font-medium text-slate-700">
               {file ? "File uploaded!" : "Upload your medical bill"}
             </p>
-            <p className="text-sm text-slate-500">PDF, PNG, JPG, or JPEG • Max 10MB</p>
+            <p className="text-sm text-slate-500">
+              PNG, JPG, or JPEG • Max 10MB
+            </p>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.png,.jpg,.jpeg"
+              accept=".png,.jpg,.jpeg"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -138,31 +141,14 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
                   className="font-semibold text-blue-600 hover:text-blue-700 underline"
                 >
                   Terms of Service & Privacy Policy
-                </button>{" "}
+                </button>{' '}
                 and consent to having my document processed using AI.
               </label>
             </div>
             <p className="text-xs text-slate-600 ml-6">
-              Your document is processed securely via Dify and never shared publicly.
+              Your document is processed securely via Dify and never shared
+              publicly.
             </p>
-          </div>
-
-          <div className="space-y-4 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                checked={contributeData}
-                onCheckedChange={(checked) =>
-                  setContributeData(checked as boolean)
-                }
-                className="mt-1"
-              />
-              <label className="text-sm text-slate-700 cursor-pointer">
-                <span className="font-semibold text-slate-700">
-                  (Optional) Help Improve Fee-ver
-                </span>{" "}
-                and share anonymized pricing data.
-              </label>
-            </div>
           </div>
 
           <Button
@@ -207,5 +193,5 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
         </div>
       )}
     </div>
-  );
+  )
 }

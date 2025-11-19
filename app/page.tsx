@@ -36,6 +36,7 @@ export default function Home() {
     setStage("analysis");
   };
 
+  // Updated: Called by AnalysisScreen only when the "Request for Reassessment" button is clicked
   const handleAnalysisDone = () => {
     setStage("reassessment");
   };
@@ -65,9 +66,9 @@ export default function Home() {
         <AnalysisScreen
           billData={billData}
           analysisType={analysisType!}
-          onComplete={handleAnalysisDone}
+          onComplete={handleAnalysisDone} // This handles the Reassessment button press
           onBack={() => setStage("triage")}
-          onReturnHome={handleReset}
+          onReturnHome={handleReset} // This handles the Finish Analysis button press
         />
       )}
 
