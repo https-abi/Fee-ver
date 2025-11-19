@@ -108,12 +108,8 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
     } catch (err: any) {
       console.error("Analysis Error:", err);
       setError(err.message || "An error occurred during analysis.");
-      // You might want a callback to stop the loader here if you handle errors in this component,
-      // but currently the parent switches to LoaderScreen. 
-      // ideally, we'd pass an onError callback to the parent to switch back to Triage.
-      // For now, we'll just alert.
+      // In a production app you might trigger a global error handler or stop the loader here
       alert(`Error: ${err.message}`);
-      // Reload or reset logic would go here
     }
   };
 

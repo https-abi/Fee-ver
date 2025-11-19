@@ -64,10 +64,8 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         inputs: {
-          image: fileInputObject, // Some Dify apps use 'image' key
-          file: fileInputObject,  // Others might use 'file'
-          query: finalPrompt,
-          prompt: finalPrompt
+          image: fileInputObject, // Map file to 'image' input variable
+          query: finalPrompt,     // Map prompt to 'query' variable
         },
         response_mode: "blocking",
         user: user,
@@ -87,12 +85,15 @@ export async function POST(req: NextRequest) {
 
     let rawAnswer: any = null;
     if (outputs) {
+      // Check common output keys from Dify Workflow
       rawAnswer = outputs.text || outputs.result || outputs.output || outputs.json || outputs.answer;
 
       if (!rawAnswer && typeof outputs === 'object') {
+        // Fallback: if keys like "items" exist directly
         if (outputs.items || outputs.total) {
           rawAnswer = outputs;
         } else {
+          // Fallback: grab the first string value
           const values = Object.values(outputs);
           rawAnswer = values.find(v => typeof v === 'string') || JSON.stringify(outputs);
         }
@@ -105,27 +106,34 @@ export async function POST(req: NextRequest) {
 
     let ocrResult: { items: any[], total: number } = { items: [], total: 0 };
 
-    // Robust JSON Extraction
+    // Robust JSON Extraction for Mixed Output (Text + JSON)
     if (typeof rawAnswer === 'object') {
       ocrResult = rawAnswer;
     } else {
       try {
         const stringAnswer = String(rawAnswer);
-        // Look for JSON pattern between first { and last }
+        // Regex to find the first valid JSON object block { ... }
+        // This allows the model to "talk" before outputting the JSON
         const jsonMatch = stringAnswer.match(/\{[\s\S]*\}/);
 
         if (jsonMatch) {
-          ocrResult = JSON.parse(jsonMatch[0]);
+          // Attempt to parse the matched JSON block
+          // We use a secondary try-catch in case the regex matches partial/invalid JSON
+          try {
+            ocrResult = JSON.parse(jsonMatch[0]);
+          } catch (innerE) {
+            // Fallback to cleaning markdown code blocks
+            const cleanJson = stringAnswer.replace(/```json/g, '').replace(/```/g, '').trim();
+            ocrResult = JSON.parse(cleanJson);
+          }
         } else {
-          // Fallback to simple clean if regex fails (unlikely for valid JSON)
           const cleanJson = stringAnswer.replace(/```json/g, '').replace(/```/g, '').trim();
           ocrResult = JSON.parse(cleanJson);
         }
       } catch (e) {
         console.error('JSON Parse Error', e);
-        // Return debug text even if parsing fails so user can see what went wrong
         return NextResponse.json({
-          debugText: rawAnswer,
+          debugText: rawAnswer, // Return raw text so user can see what happened
           error: "Failed to parse bill data from AI response."
         }, { status: 500 });
       }
@@ -174,6 +182,7 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(ocrResult.items)) {
       ocrResult.items.forEach((item: any) => {
         const price = item.price || 0;
+        // Mock threshold for benchmarking
         if (price > 10000) {
           analysisResult.benchmarkIssues.push({
             item: item.description,
@@ -196,6 +205,7 @@ export async function POST(req: NextRequest) {
       ...analysisResult,
       fileId: fileId,
       fileName: file.name,
+      // Return the raw text from the model for the "Debug Report" feature
       debugText: typeof rawAnswer === 'string' ? rawAnswer : JSON.stringify(rawAnswer, null, 2)
     });
 
