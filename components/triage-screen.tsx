@@ -35,16 +35,28 @@ const PROMPT_HMO = `
 System Prompt for qwen-vl-max (HMO/Insurance):
 You are an expert medical bill analyzer for HMO claims.
 STEP 1: VISUAL OBSERVATION
-Start by providing a "DEBUG REPORT": Describe the document, specifically looking for "HMO Approval", "LOA", or insurance coverage columns. Mention if you see any breakdowns between "Hospital Bill" and "Member Share".
+Start by providing a "DEBUG REPORT": Describe the document. Look specifically for columns like "Actual Charges", "HMO Approved", "PhilHealth", and "Patient Due" (or "Excess").
 
 STEP 2: DATA EXTRACTION
-Extract the billing information into a valid JSON object.
-Format: { "items": [{"description": "string", "price": number}], "total": number }.
+Extract the billing information into a valid JSON object with a DETAILED breakdown per item.
+Format: 
+{ 
+  "items": [
+    {
+      "description": "string", 
+      "total_charge": number, 
+      "hmo_amount": number, 
+      "patient_amount": number 
+    }
+  ]
+}
+
 Rules:
-1. Prioritize "Hospital Charges", "Professional Fees".
-2. If an item has an "HMO Covered" portion, extract the FULL price in the items list.
-3. Strip currency symbols.
-4. Output the valid JSON block at the end of your response.
+1. "total_charge": The full amount before any deductions.
+2. "hmo_amount": The amount covered by HMO + PhilHealth.
+3. "patient_amount": The amount the patient must actually pay (Excess). If 0, write 0.
+4. If the document only shows a total summary, try to distribute it or create a summary item.
+5. Output the valid JSON block at the end of your response.
 `;
 
 export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisComplete }: TriageScreenProps) {
@@ -108,7 +120,6 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
     } catch (err: any) {
       console.error("Analysis Error:", err);
       setError(err.message || "An error occurred during analysis.");
-      // In a production app you might trigger a global error handler or stop the loader here
       alert(`Error: ${err.message}`);
     }
   };

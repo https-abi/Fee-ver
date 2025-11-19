@@ -5,7 +5,6 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const user = formData.get('user') as string || 'default-user';
-    // Get the specific prompt sent from the Triage Screen
     const clientPrompt = formData.get('prompt') as string;
 
     if (!file) {
@@ -45,7 +44,6 @@ export async function POST(req: NextRequest) {
     const fileId = uploadData.id;
 
     // 2. Run Dify Workflow
-    // Use the prompt from the client, or fallback to a default if missing
     const finalPrompt = clientPrompt || `
       Analyze this medical bill. Return JSON with "items" (array of {description, price}) and "total".
     `;
@@ -64,8 +62,8 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         inputs: {
-          image: fileInputObject, // Map file to 'image' input variable
-          query: finalPrompt,     // Map prompt to 'query' variable
+          image: fileInputObject,
+          query: finalPrompt,
         },
         response_mode: "blocking",
         user: user,
@@ -85,15 +83,12 @@ export async function POST(req: NextRequest) {
 
     let rawAnswer: any = null;
     if (outputs) {
-      // Check common output keys from Dify Workflow
       rawAnswer = outputs.text || outputs.result || outputs.output || outputs.json || outputs.answer;
 
       if (!rawAnswer && typeof outputs === 'object') {
-        // Fallback: if keys like "items" exist directly
         if (outputs.items || outputs.total) {
           rawAnswer = outputs;
         } else {
-          // Fallback: grab the first string value
           const values = Object.values(outputs);
           rawAnswer = values.find(v => typeof v === 'string') || JSON.stringify(outputs);
         }
@@ -104,25 +99,28 @@ export async function POST(req: NextRequest) {
       throw new Error("Workflow finished but returned no usable output.");
     }
 
-    let ocrResult: { items: any[], total: number } = { items: [], total: 0 };
+    // Define a loose interface to handle both Direct and HMO structures
+    interface OcrItem {
+      description: string;
+      price?: number; // Direct
+      total_charge?: number; // HMO
+      hmo_amount?: number; // HMO
+      patient_amount?: number; // HMO
+    }
 
-    // Robust JSON Extraction for Mixed Output (Text + JSON)
+    let ocrResult: { items: OcrItem[], total?: number } = { items: [] };
+
     if (typeof rawAnswer === 'object') {
       ocrResult = rawAnswer;
     } else {
       try {
         const stringAnswer = String(rawAnswer);
-        // Regex to find the first valid JSON object block { ... }
-        // This allows the model to "talk" before outputting the JSON
         const jsonMatch = stringAnswer.match(/\{[\s\S]*\}/);
 
         if (jsonMatch) {
-          // Attempt to parse the matched JSON block
-          // We use a secondary try-catch in case the regex matches partial/invalid JSON
           try {
             ocrResult = JSON.parse(jsonMatch[0]);
           } catch (innerE) {
-            // Fallback to cleaning markdown code blocks
             const cleanJson = stringAnswer.replace(/```json/g, '').replace(/```/g, '').trim();
             ocrResult = JSON.parse(cleanJson);
           }
@@ -133,39 +131,78 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         console.error('JSON Parse Error', e);
         return NextResponse.json({
-          debugText: rawAnswer, // Return raw text so user can see what happened
+          debugText: rawAnswer,
           error: "Failed to parse bill data from AI response."
         }, { status: 500 });
       }
     }
 
-    // 4. TRANSFORM DATA (OCR -> Analysis)
+    // 4. TRANSFORM DATA
     const analysisResult = {
       duplicates: [] as any[],
       benchmarkIssues: [] as any[],
+      hmoItems: [] as any[], // New field for HMO Breakdown
       summary: {
-        totalCharges: ocrResult.total || 0,
+        totalCharges: 0,
         flaggedAmount: 0,
-        percentageFlagged: "0%"
+        percentageFlagged: "0%",
+        patientResponsibility: 0,
+        hmoCovered: 0
       },
       rawItems: ocrResult.items
     };
 
-    // Duplicate Detection Logic
+    const items = Array.isArray(ocrResult.items) ? ocrResult.items : [];
     const itemCounts = new Map<string, { count: number, total: number, originalItem: any }>();
-    if (Array.isArray(ocrResult.items)) {
-      ocrResult.items.forEach((item: any) => {
-        if (!item.description) return;
-        const key = item.description.trim().toLowerCase();
-        const current = itemCounts.get(key) || { count: 0, total: 0, originalItem: item };
-        itemCounts.set(key, {
-          count: current.count + 1,
-          total: current.total + (item.price || 0),
-          originalItem: item
-        });
-      });
-    }
 
+    let calculatedTotal = 0;
+    let calculatedPatientDue = 0;
+    let calculatedHmoCovered = 0;
+
+    items.forEach((item: OcrItem) => {
+      // Normalize Fields (Handle both v1 and v2 prompts)
+      const desc = item.description || "Unknown Item";
+      const price = item.total_charge || item.price || 0;
+      const hmoAmt = item.hmo_amount || 0;
+      const patientAmt = item.patient_amount || 0;
+
+      // Sum Totals
+      calculatedTotal += price;
+      calculatedPatientDue += patientAmt;
+      calculatedHmoCovered += hmoAmt;
+
+      // Populate HMO Items List
+      analysisResult.hmoItems.push({
+        item: desc,
+        covered: hmoAmt > 0 ? "Yes" : "No",
+        coInsurance: hmoAmt > 0 && patientAmt > 0 ? "Partial" : (hmoAmt > 0 ? "100%" : "0%"),
+        patientResponsibility: patientAmt,
+        hmoAmount: hmoAmt
+      });
+
+      // Duplicate Logic
+      const key = desc.trim().toLowerCase();
+      const current = itemCounts.get(key) || { count: 0, total: 0, originalItem: item };
+      itemCounts.set(key, {
+        count: current.count + 1,
+        total: current.total + price,
+        originalItem: item
+      });
+
+      // Benchmark Logic (Mock)
+      if (price > 10000) {
+        analysisResult.benchmarkIssues.push({
+          item: desc,
+          charged: price,
+          benchmark: price * 0.8,
+          variance: "20% above estimate",
+          facility: "Medical Facility"
+        });
+        analysisResult.summary.flaggedAmount += (price - (price * 0.8));
+      }
+    });
+
+    // Populate Duplicates
     itemCounts.forEach((val, key) => {
       if (val.count > 1) {
         analysisResult.duplicates.push({
@@ -178,23 +215,10 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Benchmark Logic (Mock)
-    if (Array.isArray(ocrResult.items)) {
-      ocrResult.items.forEach((item: any) => {
-        const price = item.price || 0;
-        // Mock threshold for benchmarking
-        if (price > 10000) {
-          analysisResult.benchmarkIssues.push({
-            item: item.description,
-            charged: price,
-            benchmark: price * 0.8,
-            variance: "20% above est. benchmark",
-            facility: "Medical Facility"
-          });
-          analysisResult.summary.flaggedAmount += (price - (price * 0.8));
-        }
-      });
-    }
+    // Final Summary
+    analysisResult.summary.totalCharges = calculatedTotal || ocrResult.total || 0;
+    analysisResult.summary.patientResponsibility = calculatedPatientDue;
+    analysisResult.summary.hmoCovered = calculatedHmoCovered;
 
     if (analysisResult.summary.totalCharges > 0) {
       const percentage = (analysisResult.summary.flaggedAmount / analysisResult.summary.totalCharges) * 100;
@@ -205,7 +229,6 @@ export async function POST(req: NextRequest) {
       ...analysisResult,
       fileId: fileId,
       fileName: file.name,
-      // Return the raw text from the model for the "Debug Report" feature
       debugText: typeof rawAnswer === 'string' ? rawAnswer : JSON.stringify(rawAnswer, null, 2)
     });
 
