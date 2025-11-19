@@ -125,13 +125,14 @@ export default function AnalysisScreen({
         </div>
 
         {/* Summary Cards */}
-        <div className="flex w-full gap-4 mb-8">
+        <div className="w-full mb-8 flex ">
           <div
-            className={`${
-              analysisType === "v2" ? "grid-cols-3" : "grid-cols-2"
-            } flex-2 gap-4`}
+            className={`grid gap-4 w-full flex-1 ${
+              analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
+            }`}
           >
-            <Card className="p-6 max-h-[250px]">
+            {/*Total Charges*/}
+            <Card className="p-6 h-40">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-slate-600">Total Charges</p>
                 <Tooltip content="The total amount charged on your medical bill before any reductions or insurance coverage." />
@@ -140,20 +141,22 @@ export default function AnalysisScreen({
                 ₱{analysis.summary.totalCharges.toLocaleString()}
               </p>
             </Card>
-            <Card className="p-6 border-red-200 bg-red-50">
-              <div className="flex items-center justify-between mb-2">
+            {/*Flagged Amount*/}
+            <Card className="p-6 border-red-200 bg-red-50 h-40">
+              <div className="flex items-center justify-between ">
                 <p className="text-sm text-slate-600">Flagged Amount</p>
                 <Tooltip content="The total amount of charges we identified as potentially problematic, including duplicates and prices above benchmark rates." />
               </div>
               <p className="text-2xl font-bold text-red-600">
                 ₱{analysis.summary.flaggedAmount.toLocaleString()}
               </p>
-              <p className="text-xs text-red-600 mt-1">
+              <p className="text-xs text-red-600 mb-2">
                 {analysis.summary.percentageFlagged} of total
               </p>
             </Card>
+            {/*If HMO Coverage Analysis*/}
             {analysisType === "v2" && (
-              <Card className="p-6 border-green-200 bg-green-50">
+              <Card className="p-6 border-green-200 bg-green-50 h-40">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-slate-600">Your Responsibility</p>
                   <Tooltip content="The amount you're responsible for after insurance coverage and co-insurance percentages are applied." />
@@ -167,8 +170,8 @@ export default function AnalysisScreen({
               </Card>
             )}
           </div>
-
-          <div className="flex-3"></div>
+          {/*Charts*/}
+          <div className="flex-2"></div>
         </div>
 
         {/* Issues Found */}
