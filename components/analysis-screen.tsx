@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertTriangle,
-  CheckCircle,
-  Copy,
-  Eye,
-  X,
-  FileText, // For Itemized Breakdown section header
-} from "lucide-react";
+import { AlertTriangle, CheckCircle, Copy, Eye, X, FileText } from 'lucide-react';
 import {
   Tooltip,
 } from "@/components/ui/tooltip";
@@ -21,7 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { PieChart, Pie, Cell, ResponsiveContainer, Label, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Label, Tooltip as RechartsTooltip } from "recharts";
 
 interface AnalysisScreenProps {
   billData: any;
@@ -67,12 +60,12 @@ export default function AnalysisScreen({
     ...analysis.duplicates.map((item: any, index: number) => ({
       name: item.item,
       value: item.totalCharged,
-      color: ["#3b82f6", "#ef4444"][index % 2]
+      color: ["#ef4444", "#f59e0b", "#ec4899", "#8b5cf6"][index % 4]
     })),
     ...analysis.benchmarkIssues.map((item: any, index: number) => ({
       name: item.item,
       value: item.charged,
-      color: "#10b981"
+      color: ["#3b82f6", "#10b981", "#06b6d4", "#6366f1"][index % 4]
     }))
   ];
 
@@ -255,12 +248,6 @@ export default function AnalysisScreen({
                         return null;
                       }}
                     />
-                    <Legend
-                      layout="horizontal"
-                      verticalAlign="bottom"
-                      align="center"
-                      wrapperStyle={{ paddingTop: '16px' }}
-                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -286,10 +273,10 @@ export default function AnalysisScreen({
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-medium text-slate-900 truncate">{item.item}</p>
                       {item.type === "charge" && (
-                        <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">CHARGE</Badge>
+                        <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">NOT COVERED</Badge>
                       )}
                       {item.type === "deduction" && (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">DEDUCTION</Badge>
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">COVERED</Badge>
                       )}
                     </div>
                   </div>
@@ -298,7 +285,7 @@ export default function AnalysisScreen({
                     {item.benchmarkPrice && item.type === "charge" ? (
                       <div className="flex flex-col items-end">
                         <p className="font-bold text-green-600 text-sm">
-                          PAYABLE: {formatAmount(item.benchmarkPrice)}
+                          Supposed payable: {formatAmount(item.benchmarkPrice)}
                         </p>
                         <p className="text-xs text-slate-400 line-through">
                           CHARGE: {formatAmount(item.amount)}
@@ -442,7 +429,7 @@ export default function AnalysisScreen({
           {hasIssues ? (
             <Button
               onClick={onComplete} // Triggers transition to ReassessmentScreen
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
+              className="flex-1 bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center gap-2"
             >
               Request for Reassessment →
             </Button>
