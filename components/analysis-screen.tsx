@@ -175,7 +175,7 @@ export default function AnalysisScreen({
         </div>
 
         {/* Summary Cards */}
-        <div className="w-full mb-8 flex ">
+        <div className="w-full mb-8 flex">
           <div
             className={`grid gap-4 w-full flex-1 ${
               analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
@@ -193,7 +193,7 @@ export default function AnalysisScreen({
             </Card>
             {/*Flagged Amount*/}
             <Card className="p-6 border-red-200 bg-red-50">
-              <div className="flex items-center justify-between ">
+              <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">Flagged Amount</p>
                 <Tooltip content="The total amount of charges we identified as potentially problematic, including duplicates and prices above benchmark rates." />
               </div>
@@ -206,34 +206,36 @@ export default function AnalysisScreen({
             </Card>
             {/*If HMO Coverage Analysis*/}
             {analysisType === "v2" && (
-              <Card className="p-6 border-green-200 bg-green-50 h-40">
+              <Card className="p-6 border-green-200 bg-green-50">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-slate-600">Your Responsibility</p>
                   <Tooltip content="The amount you're responsible for after insurance coverage and co-insurance percentages are applied." />
                 </div>
                 <p className="text-2xl font-bold text-green-600">
                   ₱
-                  {(
-                    analysis.summary as any
-                  ).patientResponsibility?.toLocaleString()}
+                  {
+                    (analysis.summary as any).patientResponsibility?.toLocaleString()
+                  }
                 </p>
               </Card>
             )}
           </div>
           {/* Charts */}
-          <div className="flex-1 ml-6">
+          <div className="flex-1 ml-6 flex items-center justify-center min-h-[400px]">
             {/* Pie Chart (Detailed Analysis) */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 h-full">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Detailed Analysis</h3>
-              <div className="h-[280px] w-full">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full h-full flex flex-col justify-between">
+              <h3 className="text-lg font-semibold text-slate-900 text-center">Detailed Analysis</h3>
+              <div className="flex-grow flex items-center justify-center mb-5 min-h-[320px] max-h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <PieChart>
                     <Pie
                       data={pieChartData}
                       cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={100}
+                      cy={`${
+                        analysisType === "v2" ? "40%" : "50%"
+                      }`}
+                      innerRadius={80}
+                      outerRadius={120}
                       paddingAngle={2}
                       dataKey="value"
                       labelLine={false}
@@ -246,6 +248,7 @@ export default function AnalysisScreen({
                       layout="horizontal" 
                       verticalAlign="bottom" 
                       align="center"
+                      wrapperStyle={{ paddingTop: '16px' }}
                       formatter={(value, entry, index) => {
                         const item = pieChartData[index];
                         const percentage = ((item.value / analysis.summary.totalCharges) * 100).toFixed(1);
