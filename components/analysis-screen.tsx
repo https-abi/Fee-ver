@@ -18,6 +18,7 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from "recharts";
 
 interface AnalysisScreenProps {
   billData: any;
@@ -102,6 +103,32 @@ export default function AnalysisScreen({
   const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
   const analysis = analysisType === "v1" ? mockAnalysisV1 : mockAnalysisV2;
 
+  // Prepare pie chart data based on individual items
+  const pieChartData = [
+    // Add individual duplicate items
+    ...analysis.duplicates.map((item: any, index: number) => ({
+      name: item.item,
+      value: item.totalCharged,
+      color: ["#3b82f6", "#ef4444"][index] // Blue for Consultation Fee, Red for BP Check
+    })),
+    // Add individual benchmark issue items
+    ...analysis.benchmarkIssues.map((item: any, index: number) => ({
+      name: item.item,
+      value: item.charged,
+      color: "#10b981" // Green for MRI Scan
+    }))
+  ];
+
+  // Prepare bar chart data for detailed view
+  const barChartData = [
+    { name: "Total Charges", value: analysis.summary.totalCharges, color: "#6366f1" },
+    { name: "Flagged Amount", value: analysis.summary.flaggedAmount, color: "#ef4444" },
+    ...(analysisType === "v2" ? [{ name: "Your Responsibility", value: (analysis.summary as any).patientResponsibility, color: "#10b981" }] : []),
+    ...(analysisType === "v2" ? [{ name: "HMO Covered", value: (analysis.summary as any).hmoCovered || 0, color: "#8b5cf6" }] : []),
+    { name: "Duplicates", value: analysis.duplicates.reduce((sum, item) => sum + item.totalCharged, 0), color: "#f59e0b" },
+    { name: "Above Benchmark", value: analysis.benchmarkIssues.reduce((sum, item) => sum + item.charged, 0), color: "#ec4899" },
+  ];
+
   const handleCopy = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -155,7 +182,7 @@ export default function AnalysisScreen({
             }`}
           >
             {/*Total Charges*/}
-            <Card className="p-6 h-40">
+            <Card className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-slate-600">Total Charges</p>
                 <Tooltip content="The total amount charged on your medical bill before any reductions or insurance coverage." />
@@ -165,7 +192,7 @@ export default function AnalysisScreen({
               </p>
             </Card>
             {/*Flagged Amount*/}
-            <Card className="p-6 border-red-200 bg-red-50 h-40">
+            <Card className="p-6 border-red-200 bg-red-50">
               <div className="flex items-center justify-between ">
                 <p className="text-sm text-slate-600">Flagged Amount</p>
                 <Tooltip content="The total amount of charges we identified as potentially problematic, including duplicates and prices above benchmark rates." />
@@ -193,8 +220,64 @@ export default function AnalysisScreen({
               </Card>
             )}
           </div>
-          {/*Charts*/}
-          <div className="flex-2"></div>
+          {/* Charts */}
+          <div className="flex-1 ml-6">
+            {/* Pie Chart (Detailed Analysis) */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 h-full">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Detailed Analysis</h3>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                      labelLine={false}
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Legend 
+                      layout="horizontal" 
+                      verticalAlign="bottom" 
+                      align="center"
+                      formatter={(value, entry, index) => {
+                        const item = pieChartData[index];
+                        const percentage = ((item.value / analysis.summary.totalCharges) * 100).toFixed(1);
+                        return (
+                          <span className="text-slate-700 text-sm">
+                            {item.name}: {percentage}%
+                          </span>
+                        );
+                      }}
+                    />
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox && viewBox.cx !== undefined && viewBox.cy !== undefined) {
+                          return (
+                            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="central">
+                              <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-xl font-bold">
+                                ₱{(analysis.summary.totalCharges / 1000).toFixed(1)}k
+                              </tspan>
+                              <tspan x={viewBox.cx} y={viewBox.cy + 20} className="fill-slate-600 text-sm">
+                                Total
+                              </tspan>
+                            </text>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Issues Found */}
@@ -363,7 +446,7 @@ export default function AnalysisScreen({
                   strokeLinejoin="round"
                 />
               </svg>
-              Continue
+              Finish
             </Button>
           )}
         </div>
