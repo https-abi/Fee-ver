@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'MediScan - Medical Bill Analyzer',
+  title: "Fee-ver - Medical Bill Analyzer",
   description: 'Analyze your medical bills with confidence. Identify duplicate charges, benchmark overages, and dispute unfair billing.',
   generator: 'v0.app',
   icons: {
