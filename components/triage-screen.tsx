@@ -143,11 +143,11 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
           </Alert>
         )}
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 gap-18 relative">
           {/* Option 1: Cash Payment */}
           <Card
             onClick={() => analyzeBill('v1')}
-            className="cursor-pointer hover:shadow-lg hover:border-blue-500 transition-all p-6 border-2 flex flex-col justify-between"
+            className="cursor-pointer transition-all p-6 border-2 flex flex-col justify-between"
           >
             <div className="flex flex-col">
               <div className="flex items-center gap-4 mb-6">
@@ -168,6 +168,10 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
             </Button>
           </Card>
 
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <span className="text-slate-500 font-medium">or</span>
+          </div>
+
           {/* Option 2: HMO with LOA */}
           <Card className="p-6 border-2 flex flex-col justify-between">
             <div className="flex flex-col">
@@ -184,7 +188,7 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
                 I used a Health Mandated Organization (HMO) and have my Letter of Authorization (LOA)
               </p>
 
-              <div className="relative mb-6">
+              <div className="relative mb-2">
                 <button
                   onClick={() => setShowHmoDropdown(!showHmoDropdown)}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg flex items-center justify-between hover:border-blue-400 hover:bg-blue-50 transition-colors"
