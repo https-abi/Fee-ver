@@ -182,7 +182,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
       </Card>
 
       {showTosModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-2">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
           <Card className="w-full max-w-md max-h-[85vh] flex flex-col bg-white">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="text-lg font-bold text-slate-900">
