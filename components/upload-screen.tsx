@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, AlertCircle, X } from "lucide-react";
+import { Upload, FileText, AlertCircle, X } from 'lucide-react';
 
 interface UploadScreenProps {
   onComplete: (data: any) => void;
@@ -22,11 +22,16 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type === "application/pdf") {
+      const validTypes = [
+        "application/pdf",
+        "image/png",
+        "image/jpeg"
+      ];
+      if (validTypes.includes(selectedFile.type)) {
         setFile(selectedFile);
         setError(null);
       } else {
-        setError("Please upload a PDF file");
+        setError("Please upload a PDF, PNG, JPG, or JPEG file");
         setFile(null);
       }
     }
@@ -41,11 +46,18 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
     e.preventDefault();
     e.stopPropagation();
     const droppedFile = e.dataTransfer.files?.[0];
-    if (droppedFile && droppedFile.type === "application/pdf") {
-      setFile(droppedFile);
-      setError(null);
-    } else {
-      setError("Please drop a PDF file");
+    if (droppedFile) {
+      const validTypes = [
+        "application/pdf",
+        "image/png",
+        "image/jpeg"
+      ];
+      if (validTypes.includes(droppedFile.type)) {
+        setFile(droppedFile);
+        setError(null);
+      } else {
+        setError("Please drop a PDF, PNG, JPG, or JPEG file");
+      }
     }
   };
 
@@ -90,11 +102,11 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
             <p className="text-sm font-medium text-slate-700">
               Upload your medical bill
             </p>
-            <p className="text-sm text-slate-500">PDF only • Max 10MB</p>
+            <p className="text-sm text-slate-500">PDF, PNG, JPG, or JPEG • Max 10MB</p>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf"
+              accept=".pdf,.png,.jpg,.jpeg"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -134,7 +146,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
               <label
                 htmlFor="consent"
                 className="text-sm text-slate-700 cursor-pointer"
-              >
+              ><span>I agree to the </span>
                 <button
                   onClick={() => setShowTosModal(true)}
                   className="font-semibold text-blue-600 hover:text-blue-700 underline"
@@ -182,7 +194,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
       </Card>
 
       {showTosModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-2">
           <Card className="w-full max-w-md max-h-[85vh] flex flex-col bg-white">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
               <h2 className="text-lg font-bold text-slate-900">
