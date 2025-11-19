@@ -8,7 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, FileText, AlertCircle, X } from 'lucide-react';
 
 interface UploadScreenProps {
-  onComplete: (data: any) => void;
+  // Updated interface to pass the actual File object
+  onComplete: (data: { file: File; contributeData: boolean }) => void;
 }
 
 export default function UploadScreen({ onComplete }: UploadScreenProps) {
@@ -22,11 +23,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      const validTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpeg"
-      ];
+      const validTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
       if (validTypes.includes(selectedFile.type)) {
         setFile(selectedFile);
         setError(null);
@@ -47,11 +44,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
     e.stopPropagation();
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
-      const validTypes = [
-        "application/pdf",
-        "image/png",
-        "image/jpeg"
-      ];
+      const validTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
       if (validTypes.includes(droppedFile.type)) {
         setFile(droppedFile);
         setError(null);
@@ -61,23 +54,13 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleContinue = () => {
     if (!file || !consentChecked) {
       setError("Please upload a file and accept the consent");
       return;
     }
-
-    // Simulate file processing
-    const reader = new FileReader();
-    reader.onload = () => {
-      onComplete({
-        fileName: file.name,
-        fileSize: file.size,
-        uploadedAt: new Date(),
-        contributeData: contributeData,
-      });
-    };
-    reader.readAsArrayBuffer(file);
+    // Simply pass the file and data to the parent. No API call here.
+    onComplete({ file, contributeData });
   };
 
   return (
@@ -87,8 +70,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
           <div className="text-center mb-2">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Fee-ver</h1>
             <p className="text-slate-600">
-              Check your bill's temperature.<br></br>Catch hidden fees before
-              you pay.
+              Check your bill's temperature.<br></br>Catch hidden fees before you pay.
             </p>
           </div>
 
@@ -116,13 +98,17 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
             <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg mb-6">
               <FileText className="w-5 h-5 text-green-600" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-green-900">
-                  {file.name}
-                </p>
-                <p className="text-xs text-green-700">
-                  {(file.size / 1024).toFixed(2)} KB
-                </p>
+                <p className="text-sm font-medium text-green-900">{file.name}</p>
+                <p className="text-xs text-green-700">{(file.size / 1024).toFixed(2)} KB</p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-green-100 text-green-700"
+                onClick={(e) => { e.stopPropagation(); setFile(null); }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           )}
 
@@ -138,27 +124,19 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
               <Checkbox
                 id="consent"
                 checked={consentChecked}
-                onCheckedChange={(checked) =>
-                  setConsentChecked(checked as boolean)
-                }
+                onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
                 className="mt-1"
               />
-              <label
-                htmlFor="consent"
-                className="text-sm text-slate-700 cursor-pointer"
-              ><span>I agree to the </span>
-                <button
-                  onClick={() => setShowTosModal(true)}
-                  className="font-semibold text-blue-600 hover:text-blue-700 underline"
-                >
+              <label htmlFor="consent" className="text-sm text-slate-700 cursor-pointer">
+                <span>I agree to the </span>
+                <button onClick={() => setShowTosModal(true)} className="font-semibold text-blue-600 hover:text-blue-700 underline">
                   Terms of Service & Privacy Policy
                 </button>{" "}
-                and consent to having my document processed.
+                and consent to having my document processed using AI.
               </label>
             </div>
             <p className="text-xs text-slate-600 ml-6">
-              Your document is processed securely and never shared without your
-              consent. We comply with RA 10173.
+              Your document is processed securely via Dify and never shared publicly.
             </p>
           </div>
 
@@ -166,93 +144,37 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
             <div className="flex items-start gap-3">
               <Checkbox
                 checked={contributeData}
-                onCheckedChange={(checked) =>
-                  setContributeData(checked as boolean)
-                }
+                onCheckedChange={(checked) => setContributeData(checked as boolean)}
                 className="mt-1"
               />
               <label className="text-sm text-slate-700 cursor-pointer">
-                <span className="font-semibold text-slate-700">
-                  (Optional) Help Improve Fee-ver
-                </span>{" "}
-                and share anonymized pricing data to strengthen our database.
+                <span className="font-semibold text-slate-700">(Optional) Help Improve Fee-ver</span>{" "}
+                and share anonymized pricing data.
               </label>
             </div>
-            <p className="text-xs text-slate-600 ml-6">
-              Completely optional and anonymous.
-            </p>
           </div>
 
           <Button
-            onClick={handleSubmit}
+            onClick={handleContinue}
             disabled={!file || !consentChecked}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
           >
-            Continue to Analysis
+            Continue
           </Button>
         </div>
       </Card>
 
+      {/* Terms Modal (Same as before) */}
       {showTosModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-2">
           <Card className="w-full max-w-md max-h-[85vh] flex flex-col bg-white">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-lg font-bold text-slate-900">
-                Terms & Privacy
-              </h2>
-              <button
-                onClick={() => setShowTosModal(false)}
-                className="text-slate-500 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <h2 className="text-lg font-bold text-slate-900">Terms & Privacy</h2>
+              <button onClick={() => setShowTosModal(false)} className="text-slate-500 hover:text-slate-700"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-4 space-y-3 text-slate-700 text-xs overflow-y-auto flex-1">
-              <section>
-                <h3 className="font-bold text-slate-900 mb-1">
-                  1. Data Protection (RA 10173)
-                </h3>
-                <p className="leading-relaxed">
-                  Fee-ver complies with the Data Privacy Act of 2012. Your
-                  medical bill information is protected and never shared without
-                  consent.
-                </p>
-              </section>
-              <section>
-                <h3 className="font-bold text-slate-900 mb-1">
-                  2. Your Rights
-                </h3>
-                <ul className="list-disc list-inside space-y-0.5 leading-relaxed">
-                  <li>Right to access your data</li>
-                  <li>Right to correct inaccurate data</li>
-                  <li>Right to delete your data</li>
-                  <li>Right to object to processing</li>
-                </ul>
-              </section>
-              <section>
-                <h3 className="font-bold text-slate-900 mb-1">
-                  3. How We Use Your Data
-                </h3>
-                <p className="leading-relaxed">
-                  Your bill is processed 100% on your device. We only store
-                  anonymized pricing data if you opt in.
-                </p>
-              </section>
-              <section>
-                <h3 className="font-bold text-slate-900 mb-1">
-                  4. Data Security
-                </h3>
-                <p className="leading-relaxed">
-                  All processing happens locally in your browser. Your data
-                  never leaves your device.
-                </p>
-              </section>
-              <section>
-                <h3 className="font-bold text-slate-900 mb-1">5. Contact</h3>
-                <p className="leading-relaxed">
-                  Privacy concerns? Email privacy@fever.com
-                </p>
-              </section>
+              <section><h3 className="font-bold text-slate-900 mb-1">1. Data Processing</h3><p>By uploading, you agree to have your document processed by AI models.</p></section>
+              <section><h3 className="font-bold text-slate-900 mb-1">2. Data Protection</h3><p>Fee-ver complies with the Data Privacy Act. Your medical bill information is protected.</p></section>
             </div>
           </Card>
         </div>
