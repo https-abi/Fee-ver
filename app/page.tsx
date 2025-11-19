@@ -17,8 +17,11 @@ export default function Home() {
     setStage('triage');
   };
 
-  const handleTriageSelect = (type: 'v1' | 'v2') => {
+  const handleTriageSelect = (type: 'v1' | 'v2', hmoProvider?: string) => {
     setAnalysisType(type);
+    if (hmoProvider) {
+      setBillData({ ...billData, hmoProvider });
+    }
     setStage('loading');
     // Simulate analysis processing time
     setTimeout(() => {
