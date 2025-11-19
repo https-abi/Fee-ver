@@ -4,21 +4,23 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle,
   CheckCircle,
   Copy,
-  Share2,
+  Eye,
   X,
-  Info,
 } from "lucide-react";
 import {
   Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
 } from "@/components/ui/tooltip";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from "recharts";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label } from "recharts";
 
 interface AnalysisScreenProps {
   billData: any;
@@ -30,59 +32,13 @@ interface AnalysisScreenProps {
 
 // Mock analysis data
 const mockAnalysisV1 = {
-  duplicates: [
-    {
-      item: "Consultation Fee",
-      occurrences: 2,
-      totalCharged: 2000,
-      facility: "Metro Medical Center",
-    },
-    {
-      item: "Blood Pressure Check",
-      occurrences: 2,
-      totalCharged: 600,
-      facility: "Metro Medical Center",
-    },
-  ],
-  benchmarkIssues: [
-    {
-      item: "MRI Scan",
-      charged: 15000,
-      benchmark: 12000,
-      variance: "25% above benchmark",
-      facility: "Sample Medical Center",
-    },
-  ],
+  duplicates: [],
+  benchmarkIssues: [],
+  hmoItems: [],
   summary: {
-    totalCharges: 45000,
-    flaggedAmount: 8000,
-    percentageFlagged: "17.8%",
-  },
-  hasDiscrepancies: false,
-};
-
-const mockAnalysisV2 = {
-  ...mockAnalysisV1,
-  hmoItems: [
-    {
-      item: "Laboratory Tests",
-      covered: "Yes",
-      coInsurance: "20%",
-      patientResponsibility: 1200,
-    },
-    {
-      item: "Physician Consultation",
-      covered: "Yes",
-      coInsurance: "0%",
-      patientResponsibility: 0,
-    },
-  ],
-  summary: {
-    ...mockAnalysisV1.summary,
-    totalCharges: 45000,
-    flaggedAmount: 8000,
-    hmoCovered: 28000,
-    patientResponsibility: 17000,
+    totalCharges: 0,
+    flaggedAmount: 0,
+    percentageFlagged: "0%",
   },
   hasDiscrepancies: false,
 };
@@ -101,41 +57,30 @@ export default function AnalysisScreen({
 }: AnalysisScreenProps) {
   const [copied, setCopied] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
-  const analysis = analysisType === "v1" ? mockAnalysisV1 : mockAnalysisV2;
+  const [isOpenDebug, setIsOpenDebug] = useState(false);
+  
+  const analysis = billData || mockAnalysisV1;
 
-  // Prepare pie chart data based on individual items
   const pieChartData = [
-    // Add individual duplicate items
     ...analysis.duplicates.map((item: any, index: number) => ({
       name: item.item,
       value: item.totalCharged,
-      color: ["#3b82f6", "#ef4444"][index] // Blue for Consultation Fee, Red for BP Check
+      color: ["#3b82f6", "#ef4444"][index % 2] 
     })),
-    // Add individual benchmark issue items
     ...analysis.benchmarkIssues.map((item: any, index: number) => ({
       name: item.item,
       value: item.charged,
-      color: "#10b981" // Green for MRI Scan
+      color: "#10b981"
     }))
   ];
-
-  // Prepare bar chart data for detailed view
-  const barChartData = [
-    { name: "Total Charges", value: analysis.summary.totalCharges, color: "#6366f1" },
-    { name: "Flagged Amount", value: analysis.summary.flaggedAmount, color: "#ef4444" },
-    ...(analysisType === "v2" ? [{ name: "Your Responsibility", value: (analysis.summary as any).patientResponsibility, color: "#10b981" }] : []),
-    ...(analysisType === "v2" ? [{ name: "HMO Covered", value: (analysis.summary as any).hmoCovered || 0, color: "#8b5cf6" }] : []),
-    { name: "Duplicates", value: analysis.duplicates.reduce((sum, item) => sum + item.totalCharged, 0), color: "#f59e0b" },
-    { name: "Above Benchmark", value: analysis.benchmarkIssues.reduce((sum, item) => sum + item.charged, 0), color: "#ec4899" },
-  ];
+  
+  if (pieChartData.length === 0 && analysis.summary.totalCharges > 0) {
+     pieChartData.push({ name: "Valid Charges", value: analysis.summary.totalCharges, color: "#e2e8f0" });
+  }
 
   const handleCopy = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const returnHome = () => {
-    onReturnHome();
   };
 
   return (
@@ -173,9 +118,41 @@ export default function AnalysisScreen({
               : "HMO Coverage Analysis"}
           </p>
         </div>
+        
+        {/* DEBUG REPORT */}
+        {billData?.debugText && (
+          <div className="mb-8">
+             <Collapsible
+              open={isOpenDebug}
+              onOpenChange={setIsOpenDebug}
+              className="border border-purple-200 bg-purple-50 rounded-lg"
+            >
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-purple-600" />
+                    <h3 className="text-sm font-semibold text-purple-900">
+                        AI Vision Debug Report
+                    </h3>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-purple-700 hover:text-purple-900 hover:bg-purple-100">
+                    {isOpenDebug ? "Hide" : "Show"}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="px-4 pb-4">
+                <div className="bg-black/5 rounded-md p-3 mt-2">
+                    <pre className="whitespace-pre-wrap text-xs text-slate-700 font-mono overflow-x-auto">
+                        {billData.debugText}
+                    </pre>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
 
         {/* Summary Cards */}
-        <div className="w-full mb-8 flex">
+        <div className="w-full mb-8 flex flex-col md:flex-row">
           <div
             className={`grid gap-4 w-full flex-1 ${
               analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
@@ -185,20 +162,20 @@ export default function AnalysisScreen({
             <Card className="p-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-slate-600">Total Charges</p>
-                <Tooltip content="The total amount charged on your medical bill before any reductions or insurance coverage." />
+                <Tooltip content="The total amount of all charges listed on your bill before any insurance or discounts." />
               </div>
               <p className="text-2xl font-bold text-slate-900">
-                ₱{analysis.summary.totalCharges.toLocaleString()}
+                ₱{(analysis.summary.totalCharges || 0).toLocaleString()}
               </p>
             </Card>
             {/*Flagged Amount*/}
             <Card className="p-6 border-red-200 bg-red-50">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-slate-600">Flagged Amount</p>
-                <Tooltip content="The total amount of charges we identified as potentially problematic, including duplicates and prices above benchmark rates." />
+                <Tooltip content="The total amount of charges identified as potential issues." />
               </div>
               <p className="text-2xl font-bold text-red-600">
-                ₱{analysis.summary.flaggedAmount.toLocaleString()}
+                ₱{(analysis.summary.flaggedAmount || 0).toLocaleString()}
               </p>
               <p className="text-xs text-red-600 mb-2">
                 {analysis.summary.percentageFlagged} of total
@@ -209,20 +186,16 @@ export default function AnalysisScreen({
               <Card className="p-6 border-green-200 bg-green-50">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-slate-600">Your Responsibility</p>
-                  <Tooltip content="The amount you're responsible for after insurance coverage and co-insurance percentages are applied." />
+                  <Tooltip content="The amount you're responsible for after coverage." />
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  ₱
-                  {
-                    (analysis.summary as any).patientResponsibility?.toLocaleString()
-                  }
+                  ₱{(analysis.summary.patientResponsibility || 0).toLocaleString()}
                 </p>
               </Card>
             )}
           </div>
           {/* Charts */}
-          <div className="flex-1 ml-6 flex items-center justify-center min-h-[400px]">
-            {/* Pie Chart (Detailed Analysis) */}
+          <div className="flex-1 md:ml-6 mt-6 md:mt-0 flex items-center justify-center min-h-[400px]">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full h-full flex flex-col justify-between">
               <h3 className="text-lg font-semibold text-slate-900 text-center">Detailed Analysis</h3>
               <div className="flex-grow flex items-center justify-center mb-5 min-h-[320px] max-h-[400px]">
@@ -251,7 +224,7 @@ export default function AnalysisScreen({
                       wrapperStyle={{ paddingTop: '16px' }}
                       formatter={(value, entry, index) => {
                         const item = pieChartData[index];
-                        const percentage = ((item.value / analysis.summary.totalCharges) * 100).toFixed(1);
+                        const percentage = analysis.summary.totalCharges > 0 ? ((item.value / analysis.summary.totalCharges) * 100).toFixed(1) : "0.0";
                         return (
                           <span className="text-slate-700 text-sm">
                             {item.name}: {percentage}%
@@ -265,7 +238,7 @@ export default function AnalysisScreen({
                           return (
                             <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="central">
                               <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-xl font-bold">
-                                ₱{(analysis.summary.totalCharges / 1000).toFixed(1)}k
+                                ₱{((analysis.summary.totalCharges || 0) / 1000).toFixed(1)}k
                               </tspan>
                               <tspan x={viewBox.cx} y={viewBox.cy + 20} className="fill-slate-600 text-sm">
                                 Total
@@ -298,7 +271,6 @@ export default function AnalysisScreen({
                   <h3 className="font-semibold text-slate-900">
                     Duplicate Charges
                   </h3>
-                  <Tooltip content="The same service appears to be charged multiple times on your bill. This is often a billing system error." />
                 </div>
               </div>
               <div className="space-y-3">
@@ -332,9 +304,8 @@ export default function AnalysisScreen({
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
                   <h3 className="font-semibold text-slate-900">
-                    Above Benchmark (Fee-ver Check)
+                    Fair Price Estimate Check
                   </h3>
-                  <Tooltip content="These charges are 20% or more above the typical prices in your region. This doesn't mean they're wrong, but worth questioning." />
                 </div>
               </div>
               <div className="space-y-3">
@@ -357,7 +328,7 @@ export default function AnalysisScreen({
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-600">Benchmark</p>
+                        <p className="text-slate-600">Estimate</p>
                         <p className="font-semibold text-slate-900">
                           ₱{item.benchmark.toLocaleString()}
                         </p>
@@ -374,10 +345,18 @@ export default function AnalysisScreen({
               </div>
             </div>
           )}
+          
+          {analysis.duplicates.length === 0 && analysis.benchmarkIssues.length === 0 && (
+             <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
+                <p className="font-medium text-slate-900">No major issues found!</p>
+                <p className="text-sm">Your bill appears to be within normal ranges and contains no duplicates.</p>
+             </div>
+          )}
         </Card>
 
-        {/* HMO Details (V2 only) */}
-        {analysisType === "v2" && (
+        {/* HMO Details (V2 only) - NOW DYNAMIC */}
+        {analysisType === "v2" && analysis.hmoItems && (
           <Card className="mb-8 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-900">
@@ -385,23 +364,48 @@ export default function AnalysisScreen({
               </h2>
             </div>
             <div className="space-y-3">
-              {(analysis as any).hmoItems?.map((item: any, idx: number) => (
-                <div
-                  key={idx}
-                  className="flex justify-between items-center p-3 bg-slate-50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900">{item.item}</p>
-                    <p className="text-sm text-slate-600">
-                      {item.covered === "Yes" ? "Covered" : "Not covered"} •{" "}
-                      {item.coInsurance} co-insurance
-                    </p>
-                  </div>
-                  <p className="font-semibold text-slate-900">
-                    ₱{item.patientResponsibility.toLocaleString()}
-                  </p>
-                </div>
-              ))}
+              {analysis.hmoItems.length === 0 ? (
+                  <p className="text-sm text-slate-500 italic">No individual items found or extracted.</p>
+              ) : (
+                  analysis.hmoItems.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex justify-between items-center p-3 bg-slate-50 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                           <p className="font-medium text-slate-900">{item.item}</p>
+                           {item.covered === "Yes" ? (
+                               <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">COVERED</Badge>
+                           ) : (
+                               <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">NOT COVERED</Badge>
+                           )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {/* SHOW FAIR PRICE IF AVAILABLE AND NOT COVERED */}
+                        {item.benchmarkPrice && item.covered === "No" ? (
+                           <div className="flex flex-col items-end">
+                               <p className="font-bold text-green-600 text-sm">
+                                 PAYABLE: ₱{item.benchmarkPrice.toLocaleString()}
+                               </p>
+                               <p className="text-xs text-slate-400 line-through">
+                                 CHARGE: ₱{item.amount.toLocaleString()}
+                               </p>
+                           </div>
+                        ) : (
+                           <p className="font-semibold text-slate-900">
+                             {item.covered === "Yes" ? (
+                                `Covered: ₱${item.amount.toLocaleString()}`
+                             ) : (
+                                `Payable: ₱${item.amount.toLocaleString()}`
+                             )}
+                           </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </Card>
         )}
@@ -421,40 +425,17 @@ export default function AnalysisScreen({
             <Copy className="w-4 h-4 mr-2" />
             {copied ? "Copied!" : "Copy Report"}
           </Button>
-          {analysis.hasDiscrepancies ? (
+          
             <Button
-              onClick={onComplete}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Apply for Reassessment →
-            </Button>
-          ) : (
-            <Button
-              onClick={returnHome}
+              onClick={onReturnHome}
               className="flex-1 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-white"
-              >
-                <path
-                  d="M20 6L9 17L4 12"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Finish
+              Finish Analysis
             </Button>
-          )}
         </div>
       </div>
 
+      {/* Issue Modal */}
       {selectedIssue && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -501,22 +482,6 @@ export default function AnalysisScreen({
                         ₱{selectedIssue.data.totalCharged.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Facility:</span>
-                      <span className="font-semibold text-slate-900">
-                        {selectedIssue.data.facility}
-                      </span>
-                    </div>
-                    <div className="border-t pt-3">
-                      <p className="text-sm text-slate-600 mb-2">
-                        Recommendation:
-                      </p>
-                      <p className="text-sm text-slate-900">
-                        Only one instance of this charge should appear on your
-                        bill. Contact the facility to request removal of
-                        duplicate entries.
-                      </p>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -528,54 +493,16 @@ export default function AnalysisScreen({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-600">
-                        Regional Benchmark:
+                        Fair Price Estimate:
                       </span>
                       <span className="font-semibold text-slate-900">
                         ₱{selectedIssue.data.benchmark.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Variance:</span>
-                      <span className="font-semibold text-red-600">
-                        {selectedIssue.data.variance}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Facility:</span>
-                      <span className="font-semibold text-slate-900">
-                        {selectedIssue.data.facility}
-                      </span>
-                    </div>
-                    <div className="border-t pt-3">
-                      <p className="text-sm text-slate-600 mb-2">
-                        Recommendation:
-                      </p>
-                      <p className="text-sm text-slate-900">
-                        This charge is significantly above regional averages.
-                        Request an itemized breakdown and compare with other
-                        facilities' rates.
-                      </p>
-                    </div>
                   </div>
                 )}
               </div>
 
-              {/* PDF Highlight Placeholder */}
-              <div className="mb-6">
-                <h3 className="font-semibold text-slate-900 mb-3">
-                  Bill Reference
-                </h3>
-                <div className="bg-slate-100 rounded-lg p-8 text-center border-2 border-dashed border-slate-300">
-                  <p className="text-slate-600 mb-2">
-                    📄 PDF Viewer with Highlighted Text
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Relevant section of your bill will be highlighted here
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
               <div className="flex gap-3">
                 <Button
                   variant="outline"
@@ -583,21 +510,6 @@ export default function AnalysisScreen({
                   className="flex-1"
                 >
                   Close
-                </Button>
-                <Button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => {
-                    // Copy to clipboard for dispute template
-                    const issueText = `${selectedIssue.data.item}: ${
-                      selectedIssue.type === "duplicate"
-                        ? `Charged ${selectedIssue.data.occurrences} times for ₱${selectedIssue.data.totalCharged}`
-                        : `₱${selectedIssue.data.charged} (Benchmark: ₱${selectedIssue.data.benchmark})`
-                    }`;
-                    navigator.clipboard.writeText(issueText);
-                    alert("Issue details copied to clipboard");
-                  }}
-                >
-                  Copy to Reassessment
                 </Button>
               </div>
             </div>
