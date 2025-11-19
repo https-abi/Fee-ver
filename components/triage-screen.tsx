@@ -96,8 +96,8 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
                     <AlertOctagon className="w-12 h-12 text-blue-600 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-slate-900 mb-2">Feature Scheduled for Next Release</h2>
                     <p className="text-slate-700 mb-6">
-                        The full "Check Coverage Discrepancies (HMO/LOA)" feature is scheduled for our next release. 
-                        Our V1 analysis focuses on maximizing **transparency and pricing validation**.
+                        The full feature is scheduled for our next release. 
+                        Our V1 analysis focuses on maximizing <b>transparency and pricing validation.</b>
                     </p>
                     <Button 
                         onClick={handleProceedWithV1}
