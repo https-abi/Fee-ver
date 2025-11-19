@@ -153,7 +153,7 @@ export default function AnalysisScreen({
             }`}
           >
             {/*Total Charges*/}
-            <Card className="p-4 flex flex-col justify-center flex-1">
+            <Card className="p-4 flex flex-col justify-center flex-1 gap-2">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-sm text-slate-600">Total Charges</p>
                 <Tooltip content="The total amount of all charges listed on your bill before any insurance or discounts." />
@@ -163,7 +163,7 @@ export default function AnalysisScreen({
               </p>
             </Card>
             {/*Flagged Amount*/}
-            <Card className="p-4 flex flex-col justify-center border-red-200 bg-red-50 flex-1">
+            <Card className="p-4 flex flex-col justify-center border-red-200 bg-red-50 flex-1 gap-2">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-sm text-slate-600">Flagged Amount</p>
                 <Tooltip content="The total amount of charges identified as potential issues." />
@@ -177,7 +177,7 @@ export default function AnalysisScreen({
             </Card>
             {/*If HMO Coverage Analysis*/}
             {analysisType === "v2" && (
-              <Card className="p-4 flex flex-col justify-center border-green-200 bg-green-50 flex-1">
+              <Card className="p-4 flex flex-col justify-center border-green-200 bg-green-50 flex-1 gap-2">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-sm text-slate-600">Your Responsibility</p>
                   <Tooltip content="The amount you're responsible for after coverage." />
