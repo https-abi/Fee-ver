@@ -327,7 +327,7 @@ export default function AnalysisScreen({
               Request for Reassessment →
             </Button>
           ) : (
-            <Button onClick={onReturnHome} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+            <Button onClick={onReturnHome} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
               Finish Analysis
             </Button>
           )}
