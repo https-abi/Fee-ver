@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, AlertCircle, X, Check } from 'lucide-react';
+import { Upload, FileText, AlertCircle, X, Check, ShieldCheck } from 'lucide-react';
 
 interface UploadScreenProps {
   onComplete: (data: { file: File; contributeData: boolean }) => void;
@@ -63,14 +63,19 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <Card className="w-full max-w-lg shadow-lg">
-        <div className="p-6">
-          <div className="text-center mb-2">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Fee-ver</h1>
-            <p className="text-slate-600">
-              Check your bill's temperature.<br></br>Catch hidden fees before
-              you pay.
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-slate-50">
+      {/* Reduced max-width from max-w-lg to max-w-md for a tighter card */}
+      <Card className="w-full max-w-md shadow-xl border-slate-200">
+        <div className="p-6"> {/* Reduced padding from p-8 to p-6 */}
+          <div className="text-center mb-6"> {/* Reduced margin from mb-8 to mb-6 */}
+            <div className="flex justify-center mb-3">
+                <div className="bg-blue-100 p-2 rounded-full"> {/* Reduced padding */}
+                    <ShieldCheck className="w-6 h-6 text-blue-700" /> {/* Smaller icon */}
+                </div>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 mb-1">Feever</h1> {/* Slightly smaller font */}
+            <p className="text-slate-600 text-xs leading-relaxed max-w-xs mx-auto">
+              Identify overcharges, duplicate entries, and pricing anomalies with AI-powered verification.
             </p>
           </div>
 
@@ -78,19 +83,28 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors mb-6"
+            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 group ${file ? 'border-green-500 bg-green-50/50' : 'border-slate-300 hover:border-blue-500 hover:bg-blue-50/50'}`}
           >
             {file ? (
-              <Check className="w-12 h-12 text-green-600 mx-auto mb-3" />
+              <div className="flex flex-col items-center animate-in zoom-in-95 duration-300">
+                  <div className="bg-green-100 p-2 rounded-full mb-2">
+                    <Check className="w-5 h-5 text-green-600" />
+                  </div>
+                  <p className="text-sm font-semibold text-green-800">File Ready</p>
+              </div>
             ) : (
-              <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+              <div className="flex flex-col items-center group-hover:scale-105 transition-transform duration-200">
+                  <div className="bg-slate-100 p-2 rounded-full mb-2 group-hover:bg-blue-100">
+                    <Upload className="w-5 h-5 text-slate-500 group-hover:text-blue-600" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-700 mb-0.5">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Supported formats: PNG, JPG, JPEG (Max 10MB)
+                  </p>
+              </div>
             )}
-            <p className="text-sm font-medium text-slate-700">
-              {file ? "File uploaded!" : "Upload your medical bill"}
-            </p>
-            <p className="text-sm text-slate-500">
-              PNG, JPG, or JPEG • Max 10MB
-            </p>
             <input
               ref={fileInputRef}
               type="file"
@@ -101,105 +115,107 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
           </div>
 
           {file && (
-            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg mb-6">
-              <FileText className="w-5 h-5 text-green-600" />
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium text-green-900 truncate">
-                  {/* Applied truncate class here */}
+            <div className="mt-3 flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm">
+              <div className="bg-blue-50 p-1.5 rounded">
+                 <FileText className="w-3.5 h-3.5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-900 truncate">
                   {file.name}
                 </p>
-                <p className="text-xs text-green-700">
+                <p className="text-[10px] text-slate-500">
                   {(file.size / 1024).toFixed(2)} KB
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 hover:bg-green-100 text-green-700"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setFile(null)
-                }}
+              <button 
+                onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                className="text-slate-400 hover:text-red-500 p-1"
               >
-                <X className="w-4 h-4" />
-              </Button>
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
           {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="w-4 h-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="mt-4 bg-red-50 border-red-200 text-red-800 py-2">
+              <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <AlertDescription className="text-xs">{error}</AlertDescription>
+              </div>
             </Alert>
           )}
 
-          <div className="space-y-4 mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-3">
+          <div className="mt-6 space-y-3">
+            <div className="flex items-start gap-2.5 p-2.5 rounded-lg hover:bg-slate-50 transition-colors">
               <Checkbox
                 id="consent"
                 checked={consentChecked}
                 onCheckedChange={(checked) =>
                   setConsentChecked(checked as boolean)
                 }
-                className="mt-1"
+                className="mt-0.5 border-slate-400 size-3.5 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
               />
               <label
                 htmlFor="consent"
-                className="text-sm text-slate-700 cursor-pointer"
+                className="text-[11px] text-slate-600 leading-snug cursor-pointer select-none"
               >
-                <span>I agree to the </span>
+                I agree to the{' '}
                 <button
-                  onClick={() => setShowTosModal(true)}
-                  className="font-semibold text-blue-600 hover:text-blue-700 underline"
+                  onClick={(e) => { e.preventDefault(); setShowTosModal(true); }}
+                  className="font-semibold text-blue-600 hover:text-blue-800 underline decoration-blue-300 underline-offset-2"
                 >
                   Terms of Service & Privacy Policy
-                </button>{' '}
-                and consent to having my document processed using AI.
+                </button> and consent to automated document processing.
               </label>
             </div>
-            <p className="text-xs text-slate-600 ml-6">
-              Your document is processed securely via Dify and never shared
-              publicly.
+            
+            <Button
+                onClick={handleContinue}
+                disabled={!file || !consentChecked}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium h-10 text-sm shadow-md shadow-slate-200 disabled:opacity-50 disabled:shadow-none transition-all"
+            >
+                Start
+            </Button>
+            
+            <p className="text-[10px] text-center text-slate-400 mt-2">
+              Secure processing via Dify AI • No data stored permanently
             </p>
           </div>
-
-          <Button
-            onClick={handleContinue}
-            disabled={!file || !consentChecked}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2"
-          >
-            Continue
-          </Button>
         </div>
       </Card>
 
       {showTosModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-2">
-          <Card className="w-full max-w-md max-h-[85vh] flex flex-col bg-white">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
-              <h2 className="text-lg font-bold text-slate-900">
-                Terms & Privacy
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-sm max-h-[80vh] flex flex-col bg-white shadow-2xl">
+            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                Legal Information
               </h2>
               <button
                 onClick={() => setShowTosModal(false)}
-                className="text-slate-500 hover:text-slate-700"
+                className="text-slate-400 hover:text-slate-700 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 space-y-3 text-slate-700 text-xs overflow-y-auto flex-1">
+            <div className="p-5 space-y-3 text-slate-600 text-[11px] leading-relaxed overflow-y-auto">
               <section>
-                <h3 className="font-bold text-slate-900 mb-1">
-                  1. Data Processing
-                </h3>
-                <p>By uploading, you agree to have your document processed by AI models.</p>
+                <h3 className="font-bold text-slate-900 mb-1 text-xs">1. Data Processing Agreement</h3>
+                <p>By uploading a document, you grant Fee-ver temporary permission to process the file using AI models solely for the purpose of extraction and analysis. Files are not retained after the session ends.</p>
               </section>
               <section>
-                <h3 className="font-bold text-slate-900 mb-1">
-                  2. Data Protection
-                </h3>
-                <p>Fee-ver complies with the Data Privacy Act. Your medical bill information is protected.</p>
+                <h3 className="font-bold text-slate-900 mb-1 text-xs">2. Privacy & Compliance</h3>
+                <p>We adhere to the Data Privacy Act of 2012 (RA 10173). Your medical data is treated with strict confidentiality and is encrypted during transit.</p>
               </section>
+              <section>
+                 <h3 className="font-bold text-slate-900 mb-1 text-xs">3. Disclaimer</h3>
+                 <p>This tool provides estimates based on market averages. It does not constitute legal or official medical billing advice. Discrepancies should be verified with your healthcare provider.</p>
+              </section>
+            </div>
+            <div className="p-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
+                <Button onClick={() => setShowTosModal(false)} className="w-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 h-8 text-xs">
+                    Close
+                </Button>
             </div>
           </Card>
         </div>

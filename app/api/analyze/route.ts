@@ -1,43 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // --- 1. THE HARDCODED "TRUTH" TABLE (Pricing Database) ---
-// This represents the correct market rates for Angeles City/Pampanga based on your other receipts.
+// ESTIMATED MARKET AVERAGES (Based on Philippine Medical Market & Uploaded Receipts)
+// Baseline: Accurate Medical Diagnostic Center (Pampanga)
+// Upper Limit: Adjusted for Hospital Markup (approx 20-30% buffer)
+
 const PRICING_DATABASE = [
   { 
-    keywords: ["urinalysis", "urine"], 
-    marketPrice: 100, 
-    maxAcceptable: 150, 
-    code: "LAB-URI" 
+    keywords: ["urinalysis", "urine", "clinical microscopy"], 
+    marketPrice: 60,       // Ref: Accurate Medical (50.00)
+    maxAcceptable: 150,    // Allow for hospital overhead
+    code: "81000"          // CPT Code for Urinalysis
   },
   { 
-    keywords: ["cbc", "complete blood count", "hgb", "hct"], 
-    marketPrice: 250, 
-    maxAcceptable: 400, 
-    code: "LAB-CBC" 
+    keywords: ["cbc", "complete blood count", "hgb", "hct", "hemogram"], 
+    marketPrice: 250,      // Ref: Accurate Medical (180.00) - Market avg ~250
+    maxAcceptable: 450,    // Manila Doctors charged 2,000 (Flagged)
+    code: "85025"          // CPT Code for CBC
   },
   { 
-    keywords: ["chest pa", "chest x-ray", "cxr", "chest - pa"], 
-    marketPrice: 400, 
-    maxAcceptable: 600, 
-    code: "RAD-CXR" 
+    keywords: ["chest pa", "chest x-ray", "cxr", "chest - pa", "chest x ray"], 
+    marketPrice: 350,      // Ref: Accurate Medical (310.00)
+    maxAcceptable: 650,    // Standard hospital rate cap
+    code: "71045"          // CPT Code for Chest X-Ray Single View
   },
   { 
-    keywords: ["chest and lat", "chest & lat", "chest/lat"], 
-    marketPrice: 800, 
-    maxAcceptable: 1200, 
-    code: "RAD-CXR-LAT" 
+    keywords: ["chest and lat", "chest & lat", "chest/lat", "chest ap/lat"], 
+    marketPrice: 1200,     // Est. Market for 2-view X-ray
+    maxAcceptable: 2500,   // Manila Doctors charged 6,000 (Flagged)
+    code: "71046"          // CPT Code for Chest X-Ray Two Views
   },
   { 
-    keywords: ["antigen", "cov-19"], 
-    marketPrice: 800, 
-    maxAcceptable: 1200, 
-    code: "LAB-COV" 
+    keywords: ["antigen", "cov-19", "sars-cov-2", "rapid test"], 
+    marketPrice: 600,      // 2024 Market Average
+    maxAcceptable: 900,    // Manila Doctors charged 1,000 (Borderline)
+    code: "87426"          // CPT Code for Infectious Agent Antigen
   },
   { 
-    keywords: ["ct scan", "ct-scan"], 
-    marketPrice: 4500, 
-    maxAcceptable: 6500, 
-    code: "RAD-CT" 
+    keywords: ["ct scan", "ct-scan", "computed tomography"], 
+    marketPrice: 5000,     // Ref: Ormoc Doctors (5,000.00)
+    maxAcceptable: 7500,   // Ref: MCU-FDT (6,200.00) - reasonable upper bound
+    code: "74176"          // CPT Code for CT Scan
+  },
+  {
+    keywords: ["lipid profile", "cholesterol"],
+    marketPrice: 800,
+    maxAcceptable: 1500,
+    code: "80061"
+  },
+  {
+    keywords: ["fasting blood sugar", "fbs", "glucose"],
+    marketPrice: 150,
+    maxAcceptable: 300,
+    code: "82947"
   }
 ];
 
@@ -46,6 +61,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File;
     const user = formData.get('user') as string || 'default-user';
+    
+    // Optional: Client can override prompt, but we usually stick to the default for consistency
     const clientPrompt = formData.get('prompt') as string;
 
     if (!file) {
@@ -85,8 +102,18 @@ export async function POST(req: NextRequest) {
     const fileId = uploadData.id;
 
     // 2. Run Dify Workflow
+    // We explicitly ask for a raw structure to ensure the best chance of parsing
     const finalPrompt = clientPrompt || `
-      Analyze this medical bill. Return JSON with "items" (array of {description, price}) and "total".
+      Analyze this medical bill image. 
+      Extract ALL billable items into a list.
+      Return a valid JSON object with this structure:
+      {
+        "charges": [
+          { "description": "Item Name", "amount": 100.00 }
+        ],
+        "deductions": []
+      }
+      Do not include markdown formatting like \`\`\`json. Just return the raw JSON.
     `;
 
     const fileInputObject = {
@@ -123,14 +150,16 @@ export async function POST(req: NextRequest) {
     const outputs = workflowData.data.outputs;
     let rawAnswer: any = null;
 
-    // Robust extraction logic for Dify response
     if (outputs) {
+        // Dify can return output in various keys depending on the workflow version
         rawAnswer = outputs.text || outputs.result || outputs.output || outputs.json || outputs.answer;
         
+        // Fallback: if the output is the entire object
         if (!rawAnswer && typeof outputs === 'object') {
              if (outputs.items || outputs.charges) {
                  rawAnswer = outputs;
              } else {
+                 // Last ditch: find any string value that looks like JSON
                  const values = Object.values(outputs);
                  rawAnswer = values.find(v => typeof v === 'string') || JSON.stringify(outputs);
              }
@@ -139,14 +168,20 @@ export async function POST(req: NextRequest) {
 
     let ocrResult: { charges: any[], deductions: any[] } = { charges: [], deductions: [] };
 
-    // Parsing the JSON string from Dify
+    // --- ROBUST JSON PARSING ---
     try {
         if (typeof rawAnswer === 'object') {
+             // It's already an object, use it directly
              ocrResult = rawAnswer.charges ? rawAnswer : { charges: rawAnswer.items || [], deductions: [] };
         } else {
             const stringAnswer = String(rawAnswer);
-            // Attempt to find JSON block
-            const jsonMatch = stringAnswer.match(/\{[\s\S]*\}/);
+            
+            // 1. Strip Markdown code blocks if present (```json ... ```)
+            const cleanString = stringAnswer.replace(/^```(json)?\s*/i, '').replace(/\s*```$/, '');
+            
+            // 2. Attempt to find the first { and last } to isolate JSON
+            const jsonMatch = cleanString.match(/\{[\s\S]*\}/);
+            
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 ocrResult = {
@@ -157,30 +192,27 @@ export async function POST(req: NextRequest) {
         }
     } catch (e) {
         console.error("JSON Parse Error", e);
-        // Fallback or return error - continuing with empty array to prevent crash
+        // If parsing fails, we'll proceed with empty arrays, but the Debug Report will show the raw text
     }
 
-    // Format Debug Text nicely
+    // --- FORMAT DEBUG REPORT PROPERLY ---
     let formattedDebugText = "";
     try {
         if (typeof rawAnswer === 'object') {
             formattedDebugText = JSON.stringify(rawAnswer, null, 2);
-        } else if (typeof rawAnswer === 'string') {
-             // Try to parse string as JSON to format it, otherwise leave as string
+        } else {
+             // Try to parse and re-stringify to get nice indentation
              try {
-                // Check if it contains Markdown code blocks and strip them
-                let cleanString = rawAnswer.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+                const cleanString = String(rawAnswer).replace(/^```(json)?\s*/i, '').replace(/\s*```$/, '');
                 const json = JSON.parse(cleanString);
                 formattedDebugText = JSON.stringify(json, null, 2);
              } catch {
-                // If not valid JSON, just use the raw string but trim whitespace
-                formattedDebugText = rawAnswer.trim();
+                // If it's just text, return it as is
+                formattedDebugText = String(rawAnswer);
              }
-        } else {
-            formattedDebugText = String(rawAnswer);
         }
     } catch (e) {
-        formattedDebugText = "Error formatting debug text";
+        formattedDebugText = "Could not format debug text.";
     }
 
 
@@ -196,7 +228,7 @@ export async function POST(req: NextRequest) {
             patientResponsibility: 0,
             hmoCovered: 0
         },
-        debugText: formattedDebugText
+        debugText: formattedDebugText // Now nicely formatted with whitespace
     };
 
     const charges = Array.isArray(ocrResult.charges) ? ocrResult.charges : [];
@@ -208,8 +240,11 @@ export async function POST(req: NextRequest) {
     
     for (const item of charges) {
         const desc = item.description || "Unknown Item";
-        const price = Number(item.amount || item.price || 0);
-        const cleanDesc = desc.toLowerCase();
+        // Sanitize price (remove 'PHP', commas, etc)
+        const priceString = String(item.amount || item.price || 0).replace(/[^0-9.-]+/g,"");
+        const price = parseFloat(priceString) || 0;
+        
+        const cleanDesc = desc.toLowerCase().trim();
 
         calculatedTotal += price;
 
@@ -224,7 +259,7 @@ export async function POST(req: NextRequest) {
         let benchmarkPrice = null;
         let varianceNote = null;
 
-        // Find matching item in our Pricing Database
+        // Fuzzy-ish matching: check if the bill description contains any of our keywords
         const dbMatch = PRICING_DATABASE.find(entry => 
             entry.keywords.some(keyword => cleanDesc.includes(keyword))
         );
@@ -235,7 +270,7 @@ export async function POST(req: NextRequest) {
             // Logic: If price is higher than maxAcceptable, flag it
             if (price > dbMatch.maxAcceptable) {
                 const diff = price - dbMatch.marketPrice;
-                const percentage = Math.round((diff / dbMatch.marketPrice) * 100);
+                const percentage = Math.round(((price - dbMatch.marketPrice) / dbMatch.marketPrice) * 100);
                 
                 varianceNote = `${percentage}% Overpriced`;
                 
@@ -249,6 +284,18 @@ export async function POST(req: NextRequest) {
 
                 analysisResult.summary.flaggedAmount += diff;
             }
+        } else {
+             // Optional: Flag extremely high prices for unknown items
+             if (price > 15000) {
+                 analysisResult.benchmarkIssues.push({
+                    item: desc,
+                    charged: price,
+                    benchmark: 10000, // Mock benchmark for unknown expensive item
+                    variance: "High Value (Unverified)",
+                    facility: "Review Required"
+                });
+                analysisResult.summary.flaggedAmount += (price - 10000);
+             }
         }
 
         // Add to the main list for the UI table
@@ -271,7 +318,9 @@ export async function POST(req: NextRequest) {
                 totalCharged: val.total,
                 facility: "Billing Error"
             });
-            analysisResult.summary.flaggedAmount += (val.total / val.count) * (val.count - 1);
+            // Add total duplicate amount to flagged
+            // Note: We flag the whole amount for review, or (val.total - unitPrice) if strict
+            analysisResult.summary.flaggedAmount += val.total;
         }
     });
 
@@ -280,8 +329,9 @@ export async function POST(req: NextRequest) {
     analysisResult.summary.patientResponsibility = calculatedTotal; 
 
     if (calculatedTotal > 0) {
-        const percent = (analysisResult.summary.flaggedAmount / calculatedTotal) * 100;
-        analysisResult.summary.percentageFlagged = `${percent.toFixed(1)}%`;
+        // Cap percentage at 100% visually
+        const rawPercent = (analysisResult.summary.flaggedAmount / calculatedTotal) * 100;
+        analysisResult.summary.percentageFlagged = `${Math.min(rawPercent, 100).toFixed(1)}%`;
     }
 
     return NextResponse.json({
@@ -293,7 +343,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Analysis Error:', error);
     return NextResponse.json(
-      { error: 'Failed to process medical bill' },
+      { error: 'Failed to process medical bill: ' + error.message },
       { status: 500 }
     );
   }
