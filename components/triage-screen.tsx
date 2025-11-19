@@ -145,8 +145,8 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
           >
             <div className="flex flex-col">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Eye className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Eye className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="text-left">
                   <h2 className="text-lg font-bold text-slate-900">Analyze Price and Itemized Errors</h2>
@@ -157,7 +157,7 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
                 For cash payers, balance bill payers, or anyone who suspects an overcharge.
               </p>
             </div>
-            <Button className="w-full bg-green-600 hover:bg-green-700">
+            <Button className="w-full bg-blue-600 hover:bg-blue-700">
               Select
             </Button>
           </Card>
