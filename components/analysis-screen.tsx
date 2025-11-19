@@ -20,7 +20,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label, Tooltip as RechartsTooltip } from "recharts";
 
 interface AnalysisScreenProps {
   billData: any;
@@ -217,6 +217,27 @@ export default function AnalysisScreen({
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
+                    <RechartsTooltip
+                      content={({ active, payload }: any) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          const percentage = analysis.summary.totalCharges > 0 
+                            ? ((data.value / analysis.summary.totalCharges) * 100).toFixed(1) 
+                            : "0.0";
+                          return (
+                            <div className="bg-white px-4 py-3 rounded-lg shadow-lg border border-slate-200 pointer-events-none">
+                              <p className="font-semibold text-slate-900 mb-1">{data.name}</p>
+                              <p className="text-sm text-slate-600">Amount: ₱{data.value.toLocaleString()}</p>
+                              <p className="text-sm text-slate-600">Percentage: {percentage}%</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                      cursor={{ fill: 'transparent' }}
+                      wrapperStyle={{ outline: 'none', zIndex: 1000 }}
+                      allowEscapeViewBox={{ x: true, y: true }}
+                    />
                     <Legend 
                       layout="horizontal" 
                       verticalAlign="bottom" 
