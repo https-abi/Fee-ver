@@ -45,9 +45,9 @@ interface IssueDetail {
   data: any;
 }
 
-const ORANGE_SHADES = ["#fed7aa", "#fdba74", "#fb923c", "#f97316", "#ea580c", "#c2410c"];
-const RED_SHADES = ["#fecaca", "#fca5a5", "#f87171", "#ef4444", "#dc2626", "#b91c1c"];
-const BROWN_SHADES = ["#d4a574", "#c89666", "#b8865a", "#a8784e", "#8b6846", "#7d5e3f"];
+const ORANGE_SHADES = ["#fb923c", "#f97316", "#ea580c", "#c2410c"];
+const RED_SHADES = ["#f87171", "#ef4444", "#dc2626", "#b91c1c"];
+const BROWN_SHADES = ["#b8865a", "#a8784e", "#8b6846", "#7d5e3f"];
 const GREEN_SHADE = "#10b981"; //just for debugging
 
 export default function AnalysisScreen({
@@ -73,10 +73,10 @@ export default function AnalysisScreen({
       return BROWN_SHADES[index % BROWN_SHADES.length];
     } else if (isDuplicate) {
       // Duplicate only - use orange shades
-      return ORANGE_SHADES[index % ORANGE_SHADES.length];
+      return RED_SHADES[index % RED_SHADES.length];
     } else if (isBenchmark) {
       // Above average only - use red shades
-      return RED_SHADES[index % RED_SHADES.length];
+      return ORANGE_SHADES[index % ORANGE_SHADES.length];
     } else {
       // No issues - use green
       return GREEN_SHADE;
