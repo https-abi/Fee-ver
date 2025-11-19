@@ -15,27 +15,49 @@ interface TriageScreenProps {
 }
 
 const PROMPT_DIRECT = `
-System Prompt for qwen-vl-ocr (Direct Payment):
-You are an expert OCR assistant for Philippine medical bills. Analyze the image and extract billing information.
-Return valid JSON: { "items": [{"description": "string", "price": number}], "total": number }.
+System Prompt for qwen-vl-max (Direct Payment):
+You are an expert medical bill analyzer. 
+STEP 1: VISUAL OBSERVATION
+Start by providing a "DEBUG REPORT": Describe the document layout, visible headers, hospital name (if any), and the general structure of the charges. State clearly what kind of document this is.
+
+STEP 2: DATA EXTRACTION
+Extract the billing information into a valid JSON object.
+Format: { "items": [{"description": "string", "price": number}], "total": number }.
 Rules:
 1. Prioritize "Hospital Charges", "Professional Fees", "Medicines".
 2. Strip currency symbols.
 3. Use total line amount (quantity * unit price).
-4. Exclude non-charge entries.
-5. Output ONLY valid JSON.
+4. EXCLUDE "Payment", "Discount", "Deposit", "Balance Forward", or "Total" lines from the items list.
+5. Output the valid JSON block at the end of your response.
 `;
 
 const PROMPT_HMO = `
-System Prompt for qwen-vl-ocr (HMO/Insurance):
-You are an expert OCR assistant for Philippine medical bills paid via HMO.
-Analyze the image and extract billing information, paying close attention to coverage.
-Return valid JSON: { "items": [{"description": "string", "price": number}], "total": number }.
+System Prompt for qwen-vl-max (HMO/Insurance):
+You are an expert medical bill analyzer for HMO claims.
+STEP 1: VISUAL OBSERVATION
+Start by providing a "DEBUG REPORT": Describe the document. Look specifically for columns labeled "PhilHealth", "HMO", "Discount", "Medicare", or "Insurance".
+
+STEP 2: DATA EXTRACTION
+Extract the billing information into a valid JSON object with a DETAILED breakdown per item.
+Format: 
+{ 
+  "items": [
+    {
+      "description": "string", 
+      "total_charge": number, 
+      "hmo_amount": number, 
+      "patient_amount": number 
+    }
+  ]
+}
+
 Rules:
-1. Prioritize "Hospital Charges", "Professional Fees".
-2. If an item has an "HMO Covered" portion, extract the FULL price in the items list.
-3. Strip currency symbols.
-4. Output ONLY valid JSON.
+1. "total_charge": The GROSS amount for the item (leftmost charge column).
+2. "hmo_amount": The SUM of any columns labeled PhilHealth, HMO, LOA, or Discount.
+3. "patient_amount": The "Excess" or "Amount Due". 
+4. CALCULATION RULE: If you see "total_charge" and "hmo_amount" but no explicit "patient_amount", CALCULATE it: patient_amount = total_charge - hmo_amount.
+5. DO NOT include "Payment", "Discount", "Deposit" or "Total" lines as items. Only list actual services/medicines.
+6. Output the valid JSON block at the end of your response.
 `;
 
 export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisComplete }: TriageScreenProps) {
@@ -99,12 +121,7 @@ export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisCo
     } catch (err: any) {
       console.error("Analysis Error:", err);
       setError(err.message || "An error occurred during analysis.");
-      // You might want a callback to stop the loader here if you handle errors in this component,
-      // but currently the parent switches to LoaderScreen. 
-      // ideally, we'd pass an onError callback to the parent to switch back to Triage.
-      // For now, we'll just alert.
       alert(`Error: ${err.message}`);
-      // Reload or reset logic would go here
     }
   };
 
