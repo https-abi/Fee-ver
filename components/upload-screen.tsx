@@ -103,14 +103,26 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
           {file && (
             <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg mb-6">
               <FileText className="w-5 h-5 text-green-600" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-green-900">
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-medium text-green-900 truncate">
+                  {/* Applied truncate class here */}
                   {file.name}
                 </p>
                 <p className="text-xs text-green-700">
                   {(file.size / 1024).toFixed(2)} KB
                 </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-green-100 text-green-700"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setFile(null)
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           )}
 
