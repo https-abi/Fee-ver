@@ -11,6 +11,7 @@ import {
   Share2,
   X,
   Info,
+  Eye,
 } from "lucide-react";
 import {
   Tooltip,
@@ -18,6 +19,15 @@ import {
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+<<<<<<< Updated upstream
+=======
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Label, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip } from "recharts";
+>>>>>>> Stashed changes
 
 interface AnalysisScreenProps {
   billData: any;
@@ -100,8 +110,36 @@ export default function AnalysisScreen({
 }: AnalysisScreenProps) {
   const [copied, setCopied] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<IssueDetail | null>(null);
-  const analysis = analysisType === "v1" ? mockAnalysisV1 : mockAnalysisV2;
+  const [isOpenDebug, setIsOpenDebug] = useState(false);
 
+  // Use real data if available (and not using mock logic in component)
+  // But for this component, we merge billData prop if it contains duplicates/issues from API
+  const analysis = billData?.duplicates ? billData : (analysisType === "v1" ? mockAnalysisV1 : mockAnalysisV2);
+
+<<<<<<< Updated upstream
+=======
+  // Prepare pie chart data based on individual items
+  const pieChartData = [
+    // Add individual duplicate items
+    ...analysis.duplicates.map((item: any, index: number) => ({
+      name: item.item,
+      value: item.totalCharged,
+      color: ["#3b82f6", "#ef4444"][index % 2] // Blue for Consultation Fee, Red for BP Check
+    })),
+    // Add individual benchmark issue items
+    ...analysis.benchmarkIssues.map((item: any, index: number) => ({
+      name: item.item,
+      value: item.charged,
+      color: "#10b981" // Green for MRI Scan
+    }))
+  ];
+
+  // Fallback for charts if no issues found
+  if (pieChartData.length === 0 && analysis.summary.totalCharges > 0) {
+    pieChartData.push({ name: "Valid Charges", value: analysis.summary.totalCharges, color: "#e2e8f0" });
+  }
+
+>>>>>>> Stashed changes
   const handleCopy = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -147,12 +185,47 @@ export default function AnalysisScreen({
           </p>
         </div>
 
+        {/* DEBUG REPORT (Qwen-VL-Max Vision) */}
+        {billData?.debugText && (
+          <div className="mb-8">
+            <Collapsible
+              open={isOpenDebug}
+              onOpenChange={setIsOpenDebug}
+              className="border border-purple-200 bg-purple-50 rounded-lg"
+            >
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-purple-600" />
+                  <h3 className="text-sm font-semibold text-purple-900">
+                    AI Vision Debug Report (Qwen-VL-Max)
+                  </h3>
+                </div>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-purple-700 hover:text-purple-900 hover:bg-purple-100">
+                    {isOpenDebug ? "Hide" : "Show"}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CollapsibleContent className="px-4 pb-4">
+                <div className="bg-black/5 rounded-md p-3 mt-2">
+                  <pre className="whitespace-pre-wrap text-xs text-slate-700 font-mono">
+                    {billData.debugText}
+                  </pre>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+
         {/* Summary Cards */}
+<<<<<<< Updated upstream
         <div className="w-full mb-8 flex ">
+=======
+        <div className="w-full mb-8 flex flex-col md:flex-row">
+>>>>>>> Stashed changes
           <div
-            className={`grid gap-4 w-full flex-1 ${
-              analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
-            }`}
+            className={`grid gap-4 w-full flex-1 ${analysisType === "v2" ? "grid-rows-3" : "grid-rows-2"
+              }`}
           >
             {/*Total Charges*/}
             <Card className="p-6 h-40">
@@ -193,8 +266,71 @@ export default function AnalysisScreen({
               </Card>
             )}
           </div>
+<<<<<<< Updated upstream
           {/*Charts*/}
           <div className="flex-2"></div>
+=======
+          {/* Charts */}
+          <div className="flex-1 md:ml-6 mt-6 md:mt-0 flex items-center justify-center min-h-[400px]">
+            {/* Pie Chart (Detailed Analysis) */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 w-full h-full flex flex-col justify-between">
+              <h3 className="text-lg font-semibold text-slate-900 text-center">Detailed Analysis</h3>
+              <div className="flex-grow flex items-center justify-center mb-5 min-h-[320px] max-h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieChartData}
+                      cx="50%"
+                      cy={`${analysisType === "v2" ? "40%" : "50%"
+                        }`}
+                      innerRadius={80}
+                      outerRadius={120}
+                      paddingAngle={2}
+                      dataKey="value"
+                      labelLine={false}
+                    >
+                      {pieChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Legend
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      wrapperStyle={{ paddingTop: '16px' }}
+                      formatter={(value, entry, index) => {
+                        const item = pieChartData[index];
+                        const percentage = analysis.summary.totalCharges > 0 ? ((item.value / analysis.summary.totalCharges) * 100).toFixed(1) : "0.0";
+                        return (
+                          <span className="text-slate-700 text-sm">
+                            {item.name}: {percentage}%
+                          </span>
+                        );
+                      }}
+                    />
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox && viewBox.cx !== undefined && viewBox.cy !== undefined) {
+                          return (
+                            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="central">
+                              <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-xl font-bold">
+                                ₱{(analysis.summary.totalCharges / 1000).toFixed(1)}k
+                              </tspan>
+                              <tspan x={viewBox.cx} y={viewBox.cy + 20} className="fill-slate-600 text-sm">
+                                Total
+                              </tspan>
+                            </text>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+>>>>>>> Stashed changes
         </div>
 
         {/* Issues Found */}
@@ -288,6 +424,14 @@ export default function AnalysisScreen({
               </div>
             </div>
           )}
+
+          {analysis.duplicates.length === 0 && analysis.benchmarkIssues.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+              <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
+              <p className="font-medium text-slate-900">No major issues found!</p>
+              <p className="text-sm">Your bill appears to be within normal ranges and contains no duplicates.</p>
+            </div>
+          )}
         </Card>
 
         {/* HMO Details (V2 only) */}
@@ -335,7 +479,7 @@ export default function AnalysisScreen({
             <Copy className="w-4 h-4 mr-2" />
             {copied ? "Copied!" : "Copy Report"}
           </Button>
-          {analysis.hasDiscrepancies ? (
+          {analysis.hasDiscrepancies || analysis.duplicates.length > 0 || analysis.benchmarkIssues.length > 0 ? (
             <Button
               onClick={onComplete}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
@@ -502,11 +646,10 @@ export default function AnalysisScreen({
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => {
                     // Copy to clipboard for dispute template
-                    const issueText = `${selectedIssue.data.item}: ${
-                      selectedIssue.type === "duplicate"
+                    const issueText = `${selectedIssue.data.item}: ${selectedIssue.type === "duplicate"
                         ? `Charged ${selectedIssue.data.occurrences} times for ₱${selectedIssue.data.totalCharged}`
                         : `₱${selectedIssue.data.charged} (Benchmark: ₱${selectedIssue.data.benchmark})`
-                    }`;
+                      }`;
                     navigator.clipboard.writeText(issueText);
                     alert("Issue details copied to clipboard");
                   }}

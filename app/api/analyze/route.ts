@@ -64,14 +64,14 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         inputs: {
-          image: fileInputObject,
-          file: fileInputObject, 
+          image: fileInputObject, // Some Dify apps use 'image' key
+          file: fileInputObject,  // Others might use 'file'
           query: finalPrompt,
           prompt: finalPrompt
         },
         response_mode: "blocking",
         user: user,
-        files: [ fileInputObject ]
+        files: [fileInputObject]
       }),
     });
 
@@ -84,107 +84,119 @@ export async function POST(req: NextRequest) {
 
     // 3. Parse Workflow Output
     const outputs = workflowData.data.outputs;
-    
+
     let rawAnswer: any = null;
     if (outputs) {
-        rawAnswer = outputs.text || outputs.result || outputs.output || outputs.json || outputs.answer;
-        
-        if (!rawAnswer && typeof outputs === 'object') {
-             if (outputs.items || outputs.total) {
-                 rawAnswer = outputs;
-             } else {
-                 const values = Object.values(outputs);
-                 rawAnswer = values.find(v => typeof v === 'string') || JSON.stringify(outputs);
-             }
+      rawAnswer = outputs.text || outputs.result || outputs.output || outputs.json || outputs.answer;
+
+      if (!rawAnswer && typeof outputs === 'object') {
+        if (outputs.items || outputs.total) {
+          rawAnswer = outputs;
+        } else {
+          const values = Object.values(outputs);
+          rawAnswer = values.find(v => typeof v === 'string') || JSON.stringify(outputs);
         }
+      }
     }
 
     if (!rawAnswer) {
-        throw new Error("Workflow finished but returned no usable output.");
+      throw new Error("Workflow finished but returned no usable output.");
     }
 
     let ocrResult: { items: any[], total: number } = { items: [], total: 0 };
-    
+
+    // Robust JSON Extraction
     if (typeof rawAnswer === 'object') {
-        ocrResult = rawAnswer;
+      ocrResult = rawAnswer;
     } else {
-        try {
-            const cleanJson = String(rawAnswer).replace(/```json/g, '').replace(/```/g, '').trim();
-            ocrResult = JSON.parse(cleanJson);
-        } catch (e) {
-            console.error('JSON Parse Error', e);
-             return NextResponse.json({ 
-                rawText: rawAnswer, 
-                error: "Failed to parse bill data from AI response." 
-             }, { status: 500 });
+      try {
+        const stringAnswer = String(rawAnswer);
+        // Look for JSON pattern between first { and last }
+        const jsonMatch = stringAnswer.match(/\{[\s\S]*\}/);
+
+        if (jsonMatch) {
+          ocrResult = JSON.parse(jsonMatch[0]);
+        } else {
+          // Fallback to simple clean if regex fails (unlikely for valid JSON)
+          const cleanJson = stringAnswer.replace(/```json/g, '').replace(/```/g, '').trim();
+          ocrResult = JSON.parse(cleanJson);
         }
+      } catch (e) {
+        console.error('JSON Parse Error', e);
+        // Return debug text even if parsing fails so user can see what went wrong
+        return NextResponse.json({
+          debugText: rawAnswer,
+          error: "Failed to parse bill data from AI response."
+        }, { status: 500 });
+      }
     }
 
     // 4. TRANSFORM DATA (OCR -> Analysis)
     const analysisResult = {
-        duplicates: [] as any[],
-        benchmarkIssues: [] as any[],
-        summary: {
-            totalCharges: ocrResult.total || 0,
-            flaggedAmount: 0,
-            percentageFlagged: "0%"
-        },
-        rawItems: ocrResult.items
+      duplicates: [] as any[],
+      benchmarkIssues: [] as any[],
+      summary: {
+        totalCharges: ocrResult.total || 0,
+        flaggedAmount: 0,
+        percentageFlagged: "0%"
+      },
+      rawItems: ocrResult.items
     };
 
     // Duplicate Detection Logic
     const itemCounts = new Map<string, { count: number, total: number, originalItem: any }>();
     if (Array.isArray(ocrResult.items)) {
-        ocrResult.items.forEach((item: any) => {
-            if (!item.description) return;
-            const key = item.description.trim().toLowerCase();
-            const current = itemCounts.get(key) || { count: 0, total: 0, originalItem: item };
-            itemCounts.set(key, {
-                count: current.count + 1,
-                total: current.total + (item.price || 0),
-                originalItem: item
-            });
+      ocrResult.items.forEach((item: any) => {
+        if (!item.description) return;
+        const key = item.description.trim().toLowerCase();
+        const current = itemCounts.get(key) || { count: 0, total: 0, originalItem: item };
+        itemCounts.set(key, {
+          count: current.count + 1,
+          total: current.total + (item.price || 0),
+          originalItem: item
         });
+      });
     }
 
     itemCounts.forEach((val, key) => {
-        if (val.count > 1) {
-            analysisResult.duplicates.push({
-                item: val.originalItem.description,
-                occurrences: val.count,
-                totalCharged: val.total,
-                facility: "Medical Facility"
-            });
-            analysisResult.summary.flaggedAmount += val.total;
-        }
+      if (val.count > 1) {
+        analysisResult.duplicates.push({
+          item: val.originalItem.description,
+          occurrences: val.count,
+          totalCharged: val.total,
+          facility: "Medical Facility"
+        });
+        analysisResult.summary.flaggedAmount += val.total;
+      }
     });
 
     // Benchmark Logic (Mock)
     if (Array.isArray(ocrResult.items)) {
-        ocrResult.items.forEach((item: any) => {
-             const price = item.price || 0;
-             if (price > 10000) {
-                 analysisResult.benchmarkIssues.push({
-                     item: item.description,
-                     charged: price,
-                     benchmark: price * 0.8,
-                     variance: "20% above est. benchmark",
-                     facility: "Medical Facility"
-                 });
-                 analysisResult.summary.flaggedAmount += (price - (price * 0.8)); 
-             }
-        });
+      ocrResult.items.forEach((item: any) => {
+        const price = item.price || 0;
+        if (price > 10000) {
+          analysisResult.benchmarkIssues.push({
+            item: item.description,
+            charged: price,
+            benchmark: price * 0.8,
+            variance: "20% above est. benchmark",
+            facility: "Medical Facility"
+          });
+          analysisResult.summary.flaggedAmount += (price - (price * 0.8));
+        }
+      });
     }
 
     if (analysisResult.summary.totalCharges > 0) {
-        const percentage = (analysisResult.summary.flaggedAmount / analysisResult.summary.totalCharges) * 100;
-        analysisResult.summary.percentageFlagged = `${percentage.toFixed(1)}%`;
+      const percentage = (analysisResult.summary.flaggedAmount / analysisResult.summary.totalCharges) * 100;
+      analysisResult.summary.percentageFlagged = `${percentage.toFixed(1)}%`;
     }
 
     return NextResponse.json({
       ...analysisResult,
       fileId: fileId,
-      fileName: file.name
+      fileName: file.name,
+      debugText: typeof rawAnswer === 'string' ? rawAnswer : JSON.stringify(rawAnswer, null, 2)
     });
 
   } catch (error: any) {

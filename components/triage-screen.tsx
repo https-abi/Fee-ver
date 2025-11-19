@@ -15,27 +15,36 @@ interface TriageScreenProps {
 }
 
 const PROMPT_DIRECT = `
-System Prompt for qwen-vl-ocr (Direct Payment):
-You are an expert OCR assistant for Philippine medical bills. Analyze the image and extract billing information.
-Return valid JSON: { "items": [{"description": "string", "price": number}], "total": number }.
+System Prompt for qwen-vl-max (Direct Payment):
+You are an expert medical bill analyzer. 
+STEP 1: VISUAL OBSERVATION
+Start by providing a "DEBUG REPORT": Describe the document layout, visible headers, hospital name (if any), and the general structure of the charges. State clearly what kind of document this is.
+
+STEP 2: DATA EXTRACTION
+Extract the billing information into a valid JSON object.
+Format: { "items": [{"description": "string", "price": number}], "total": number }.
 Rules:
 1. Prioritize "Hospital Charges", "Professional Fees", "Medicines".
 2. Strip currency symbols.
 3. Use total line amount (quantity * unit price).
 4. Exclude non-charge entries.
-5. Output ONLY valid JSON.
+5. Output the valid JSON block at the end of your response.
 `;
 
 const PROMPT_HMO = `
-System Prompt for qwen-vl-ocr (HMO/Insurance):
-You are an expert OCR assistant for Philippine medical bills paid via HMO.
-Analyze the image and extract billing information, paying close attention to coverage.
-Return valid JSON: { "items": [{"description": "string", "price": number}], "total": number }.
+System Prompt for qwen-vl-max (HMO/Insurance):
+You are an expert medical bill analyzer for HMO claims.
+STEP 1: VISUAL OBSERVATION
+Start by providing a "DEBUG REPORT": Describe the document, specifically looking for "HMO Approval", "LOA", or insurance coverage columns. Mention if you see any breakdowns between "Hospital Bill" and "Member Share".
+
+STEP 2: DATA EXTRACTION
+Extract the billing information into a valid JSON object.
+Format: { "items": [{"description": "string", "price": number}], "total": number }.
 Rules:
 1. Prioritize "Hospital Charges", "Professional Fees".
 2. If an item has an "HMO Covered" portion, extract the FULL price in the items list.
 3. Strip currency symbols.
-4. Output ONLY valid JSON.
+4. Output the valid JSON block at the end of your response.
 `;
 
 export default function TriageScreen({ uploadData, onAnalysisStart, onAnalysisComplete }: TriageScreenProps) {
