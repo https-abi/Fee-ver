@@ -56,6 +56,7 @@ const mockAnalysisV1 = {
     flaggedAmount: 8000,
     percentageFlagged: "17.8%",
   },
+  hasDiscrepancies: true,
 };
 
 const mockAnalysisV2 = {
@@ -81,6 +82,7 @@ const mockAnalysisV2 = {
     hmoCovered: 28000,
     patientResponsibility: 17000,
   },
+  hasDiscrepancies: true,
 };
 
 interface IssueDetail {
@@ -110,9 +112,24 @@ export default function AnalysisScreen({
         <div className="mb-8">
           <button
             onClick={onBack}
-            className="text-blue-600 hover:text-blue-700 font-medium text-sm mb-4"
+            className="flex items-center justify-center h-[30px] w-[30px] rounded-full bg-slate-300 hover:bg-slate-200 font-medium text-sm mb-4"
           >
-            ← Back to Triage
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="text-slate-800"
+            >
+              <path
+                d="M15 18L9 12L15 6"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
             Analysis Report
