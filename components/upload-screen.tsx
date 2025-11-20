@@ -73,7 +73,7 @@ export default function UploadScreen({ onComplete }: UploadScreenProps) {
                     <ShieldCheck className="w-6 h-6 text-blue-700" /> {/* Smaller icon */}
                 </div>
             </div>
-            <h1 className="text-xl font-bold text-slate-900 mb-1">Feever</h1> {/* Slightly smaller font */}
+            <h1 className="text-xl font-bold text-slate-900 mb-1">Fee-ver</h1> {/* Slightly smaller font */}
             <p className="text-slate-600 text-xs leading-relaxed max-w-xs mx-auto">
               Identify overcharges, duplicate entries, and pricing anomalies with AI-powered verification.
             </p>
